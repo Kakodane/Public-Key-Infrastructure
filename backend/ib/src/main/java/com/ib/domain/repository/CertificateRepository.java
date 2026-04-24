@@ -13,4 +13,6 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
 	List<Certificate> findAllByOwner_Id(Long ownerUserId);
 
 	List<Certificate> findAllByOrganization_IdAndStatus(Long organizationId, CertificateStatus status);
+
+    List<Certificate> findAll();
 }
