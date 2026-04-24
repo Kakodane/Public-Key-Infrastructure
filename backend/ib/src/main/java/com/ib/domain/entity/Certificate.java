@@ -88,4 +88,13 @@ public class Certificate {
 
 	@Column(name = "certificate_pem", columnDefinition = "TEXT")
 	private String certificatePem;
+
+	@Column(name = "encrypted_private_key", length = 8192)
+	private byte[] encryptedPrivateKey;
+
+	@Column(name = "private_key_nonce", length = 12)
+	private byte[] privateKeyNonce;
+
+	@Column(name = "private_key_key_version")
+	private Integer privateKeyKeyVersion;
 }
