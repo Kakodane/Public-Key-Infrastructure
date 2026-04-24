@@ -39,9 +39,11 @@ public class Organization {
 	private String name;
 
 	@Column(name = "encrypted_org_key")
+	@ToString.Exclude
 	private byte[] encryptedOrgKey;
 
 	@Column(name = "org_key_nonce")
+	@ToString.Exclude
 	private byte[] orgKeyNonce;
 
 	@Column(name = "org_key_version")

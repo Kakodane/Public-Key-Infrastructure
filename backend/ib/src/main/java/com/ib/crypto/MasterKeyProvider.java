@@ -30,13 +30,13 @@ public class MasterKeyProvider {
 		try {
 			return Base64.getDecoder().decode(keyBase64);
 		} catch (IllegalArgumentException ex) {
-			throw new IllegalStateException("Invalid crypto.master-key-base64 value.", ex);
+			throw new IllegalStateException("Invalid cryptographic configuration.", ex);
 		}
 	}
 
 	private static void validateKeyLength(byte[] keyBytes) {
 		if (keyBytes.length != MASTER_KEY_BYTES) {
-			throw new IllegalStateException("crypto.master-key-base64 must decode to exactly 32 bytes.");
+			throw new IllegalStateException("Invalid cryptographic configuration.");
 		}
 	}
 }

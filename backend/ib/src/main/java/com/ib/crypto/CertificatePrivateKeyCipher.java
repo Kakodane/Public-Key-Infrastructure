@@ -2,7 +2,9 @@ package com.ib.crypto;
 
 import com.ib.domain.entity.Certificate;
 import com.ib.domain.entity.Organization;
+import com.ib.domain.repository.CertificateRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKey;
 
@@ -11,11 +13,14 @@ public class CertificatePrivateKeyCipher {
 
 	private final OrganizationKeyService organizationKeyService;
 	private final AesGcmCryptoService cryptoService;
+	private final CertificateRepository certificateRepository;
 
 	public CertificatePrivateKeyCipher(OrganizationKeyService organizationKeyService,
-	                                   AesGcmCryptoService cryptoService) {
+	                                   AesGcmCryptoService cryptoService,
+	                                   CertificateRepository certificateRepository) {
 		this.organizationKeyService = organizationKeyService;
 		this.cryptoService = cryptoService;
+		this.certificateRepository = certificateRepository;
 	}
 
 	public EncryptedPayload encryptPrivateKey(byte[] pkcs8PrivateKey, Organization organization) {
@@ -54,22 +59,31 @@ public class CertificatePrivateKeyCipher {
 		certificate.setPrivateKeyKeyVersion(payload.keyVersion());
 	}
 
-	public byte[] decryptPrivateKey(Certificate certificate) {
+	@Transactional(readOnly = true)
+	public byte[] loadPrivateKey(Long certId) {
+		if (certId == null) {
+			throw new IllegalArgumentException("certId must not be null.");
+		}
+		Certificate certificate = certificateRepository.findById(certId)
+				.orElseThrow(() -> new IllegalStateException("Certificate private key is unavailable."));
+		return decryptPrivateKey(certificate);
+	}
+
+	private byte[] decryptPrivateKey(Certificate certificate) {
 		if (certificate == null) {
 			throw new IllegalArgumentException("certificate must not be null.");
 		}
 		if (certificate.getEncryptedPrivateKey() == null
 				|| certificate.getPrivateKeyNonce() == null
 				|| certificate.getPrivateKeyKeyVersion() == null) {
-			throw new IllegalStateException("Certificate has no encrypted private key.");
+			throw new IllegalStateException("Certificate private key is unavailable.");
 		}
 		if (certificate.getPrivateKeyKeyVersion() != OrganizationKeyService.CURRENT_KEY_VERSION) {
-			throw new CryptoOperationException(
-					"Unsupported private key version: " + certificate.getPrivateKeyKeyVersion(), null);
+			throw new CryptoOperationException("Certificate private key cannot be decrypted.", null);
 		}
 		Organization organization = certificate.getOrganization();
 		if (organization == null) {
-			throw new IllegalStateException("Certificate is not attached to an organization.");
+			throw new IllegalStateException("Certificate private key is unavailable.");
 		}
 		SecretKey orgKey = organizationKeyService.getOrCreateOrgKey(organization);
 		return cryptoService.decrypt(
