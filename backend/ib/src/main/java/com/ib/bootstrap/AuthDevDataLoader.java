@@ -1,5 +1,6 @@
 package com.ib.bootstrap;
 
+import com.ib.crypto.OrganizationKeyService;
 import com.ib.domain.entity.Organization;
 import com.ib.domain.entity.User;
 import com.ib.domain.enums.Role;
@@ -22,15 +23,18 @@ public class AuthDevDataLoader implements CommandLineRunner {
 	private final UserRepository userRepository;
 	private final OrganizationRepository organizationRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final OrganizationKeyService organizationKeyService;
 
 	public AuthDevDataLoader(
 			UserRepository userRepository,
 			OrganizationRepository organizationRepository,
-			PasswordEncoder passwordEncoder
+			PasswordEncoder passwordEncoder,
+			OrganizationKeyService organizationKeyService
 	) {
 		this.userRepository = userRepository;
 		this.organizationRepository = organizationRepository;
 		this.passwordEncoder = passwordEncoder;
+		this.organizationKeyService = organizationKeyService;
 	}
 
 	@Override
@@ -41,6 +45,7 @@ public class AuthDevDataLoader implements CommandLineRunner {
 		Organization org = organizationRepository.save(Organization.builder()
 				.name("Demo Organization")
 				.build());
+		organizationKeyService.getOrCreateOrgKey(org);
 
 		String hash = passwordEncoder.encode(DEMO_PASSWORD);
 
