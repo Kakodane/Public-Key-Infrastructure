@@ -1,9 +1,22 @@
 package com.ib.service.user;
 
+import com.ib.crypto.OrganizationKeyService;
 import com.ib.domain.entity.Certificate;
+import com.ib.domain.entity.Organization;
+import com.ib.domain.entity.User;
+import com.ib.domain.entity.ValidationToken;
 import com.ib.domain.repository.CertificateRepository;
+import com.ib.domain.repository.OrganizationRepository;
 import com.ib.dto.auth.GetCertificateResponse;
-import lombok.AllArgsConstructor;
+import com.ib.dto.user.CreateCAUserRequest;
+import com.ib.dto.user.CreateCAUserResponse;
+import com.ib.dto.user.CreateOrganizationRequest;
+import com.ib.dto.user.CreateOrganizationResponse;
+import com.ib.exception.ResourceAlreadyExistsException;
+import com.ib.service.EmailService;
+import com.ib.service.ValidationTokenService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,18 +24,50 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@AllArgsConstructor
-@Transactional
+@RequiredArgsConstructor
 public class AdminService {
     private final CertificateRepository certificateRepository;
+    private final OrganizationRepository organizationRepository;
+    private final CAService caService;
+    private final ValidationTokenService validationTokenService;
+    private final EmailService emailService;
+    private final OrganizationKeyService organizationKeyService;
 
-    public List<GetCertificateResponse> findAll(){
-        List<Certificate> certificates= certificateRepository.findAll();
-        List<GetCertificateResponse> certificateResponses= new ArrayList<>();
-        for(Certificate certificate: certificates){
-            GetCertificateResponse response= new GetCertificateResponse(certificate);
-            certificateResponses.add(response);
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
+
+    @Transactional(readOnly = true)
+    public List<GetCertificateResponse> findAll() {
+        List<Certificate> certificates = certificateRepository.findAll();
+        List<GetCertificateResponse> certificateResponses = new ArrayList<>();
+        for (Certificate certificate : certificates) {
+            certificateResponses.add(new GetCertificateResponse(certificate));
         }
         return certificateResponses;
+    }
+    @Transactional
+    public CreateCAUserResponse createCAUser(CreateCAUserRequest request) {
+        User user = caService.createUser(request);
+        ValidationToken token = validationTokenService.createToken(user);
+        String activationUrl = frontendUrl + "/set-password?token=" + token.getToken();
+        emailService.sendEmail(
+                "v.vitomirovic@gmail.com",
+                "Activate your CA user account",
+                "Click the link to set your password: " + activationUrl
+        );
+        return new CreateCAUserResponse(user.getId());
+    }
+
+    @Transactional
+    public CreateOrganizationResponse createOrganization(CreateOrganizationRequest request) {
+        if (organizationRepository.findByNameIgnoreCase(request.name()).isPresent()) {
+            throw new ResourceAlreadyExistsException("Organization with this name already exists");
+        }
+        Organization organization = Organization.builder()
+                .name(request.name())
+                .build();
+        organizationKeyService.getOrCreateOrgKey(organization);
+        Organization saved = organizationRepository.save(organization);
+        return new CreateOrganizationResponse(saved.getId(), saved.getName());
     }
 }
