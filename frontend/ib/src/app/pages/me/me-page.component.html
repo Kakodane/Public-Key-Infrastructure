@@ -1,0 +1,88 @@
+<div style="min-height: 100vh; padding: 28px 18px; display: grid; place-items: start center;">
+  <div class="ti-card" style="width: min(760px, 100%); padding: 22px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+      <div>
+        <div class="ti-pill ti-mono">/api/me</div>
+        <h1 style="margin: 10px 0 4px; font-size: 22px; letter-spacing: -0.02em;">Session</h1>
+        <p style="margin: 0; color: var(--text-2); font-size: 13px;">
+          Verifies access token attachment + role parsing.
+        </p>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        @if (auth.me()) {
+          <button class="ti-btn" style="border-color: rgba(248, 81, 73, 0.55);" (click)="logout()">
+            Logout
+          </button>
+        } @else {
+          <a class="ti-btn" style="text-decoration: none; padding: 0.6rem 0.8rem;" routerLink="/login">
+            Login
+          </a>
+        }
+      </div>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--border); margin: 16px 0;" />
+
+    @if (auth.me(); as me) {
+      <div style="display: grid; gap: 10px;">
+        <div class="ti-card" style="padding: 12px;">
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 140px 1fr;
+              gap: 10px 12px;
+              align-items: center;
+            "
+          >
+            <div style="color: var(--text-2); font-size: 12px;">id</div>
+            <div
+              class="ti-mono"
+              style="
+                background: rgba(33, 38, 45, 0.65);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 10px 12px;
+              "
+            >
+              {{ me.id }}
+            </div>
+
+            <div style="color: var(--text-2); font-size: 12px;">email</div>
+            <div
+              class="ti-mono"
+              style="
+                background: rgba(33, 38, 45, 0.65);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 10px 12px;
+              "
+            >
+              {{ me.email }}
+            </div>
+
+            <div style="color: var(--text-2); font-size: 12px;">role</div>
+            <div
+              class="ti-mono"
+              style="
+                background: rgba(33, 38, 45, 0.65);
+                border: 1px solid rgba(188, 140, 255, 0.35);
+                border-radius: 10px;
+                padding: 10px 12px;
+                color: var(--cyber-violet);
+              "
+            >
+              {{ me.role }}
+            </div>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="ti-card" style="padding: 12px;">
+        <div style="color: var(--warning); font-size: 12px;">
+          No authenticated identity loaded. Try logging in.
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
