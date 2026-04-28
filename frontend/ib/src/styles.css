@@ -1,1 +1,134 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --void:    #0D1117;
+  --surface: #161B22;
+  --elevated:#21262D;
+  --border:  #30363D;
+  --muted:   #8B949E;
+  --text:    #C9D1D9;
+  --blue:    #388BFD;
+  --safe:    #3FB950;
+  --warn:    #D29922;
+  --crit:    #F85149;
+  --violet:  #BC8CFF;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* monospaced class for machine data */
+.ti-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+/* card surface */
+.ti-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+/* form input */
+.ti-input {
+  width: 100%;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.ti-input::placeholder { color: var(--muted); }
+.ti-input:focus { border-color: var(--blue); }
+
+/* primary button */
+.ti-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--blue);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.ti-btn:hover:not(:disabled) { opacity: 0.85; }
+.ti-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ghost / secondary button */
+.ti-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.ti-btn-ghost:hover:not(:disabled) { background: var(--elevated); opacity: 1; }
+
+/* status pills */
+.ti-pill {
+  display: inline-block;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+.ti-pill--safe   { background: rgba(63,185,80,.15);  color: var(--safe); }
+.ti-pill--warn   { background: rgba(210,153,34,.15); color: var(--warn); }
+.ti-pill--crit   { background: rgba(248,81,73,.15);  color: var(--crit); }
+.ti-pill--info   { background: rgba(56,139,253,.15); color: var(--blue); }
+.ti-pill--violet { background: rgba(188,140,255,.15);color: var(--violet); }
+
+/* inline error / success text */
+.ti-err { color: var(--crit); font-size: 13px; }
+.ti-ok  { color: var(--safe); font-size: 13px; }
+
+/* centered auth layout */
+.ti-auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* data row inside a card */
+.ti-data-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ti-data-row:last-child { border-bottom: none; }
+.ti-data-row__label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 80px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

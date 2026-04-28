@@ -14,7 +14,7 @@ import java.io.IOException;
 @Service
 @RequiredArgsConstructor
 public class EmailService {
-    @Value("${SENDGRID_API_KEY}")
+    @Value("${SENDGRID_API_KEY:}")
     private String apiKey;
 
     @Value("${app.mail.from}")
@@ -27,6 +27,11 @@ public class EmailService {
         Email toEmail = new Email(to);
         Content content = new Content("text/plain", body);
         Mail mail = new Mail(from, subject, toEmail, content);
+
+        if (apiKey == null || apiKey.isBlank()) {
+            System.out.println("[EmailService] SENDGRID_API_KEY not configured – skipping actual send.");
+            return;
+        }
 
         SendGrid sg = new SendGrid(apiKey);
         Request request = new Request();
