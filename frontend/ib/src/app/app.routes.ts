@@ -34,8 +34,8 @@ export const routes: Routes = [
   {
     path: 'regular/certificates',
     loadComponent: () =>
-      import('./pages/regular/my-certificates-page.component').then(
-        (m) => m.MyCertificatesPageComponent
+      import('./pages/regular/regular-certificates/regular-certificates-page.component').then(
+        (m) => m.RegularCertificatesPageComponent
       ),
     canActivate: [authGuard, hasRoleGuard([ROLE_REGULAR_USER])]
   },

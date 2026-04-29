@@ -1,16 +1,16 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, signal } from '@angular/core';
-import { RegularService } from '../../core/regular/regular.service';
-import { RegularCertificateResponse } from '../../core/regular/regular.types';
+import { RegularService } from '../../../core/regular/regular.service';
+import { RegularCertificateResponse } from '../../../core/regular/regular.types';
 
 @Component({
-  selector: 'app-my-certificates-page',
+  selector: 'app-regular-certificates-page',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './my-certificates-page.component.html',
-  styleUrl: './my-certificates-page.component.css'
+  templateUrl: './regular-certificates-page.component.html',
+  styleUrl: './regular-certificates-page.component.css'
 })
-export class MyCertificatesPageComponent implements OnInit {
+export class RegularCertificatesPageComponent implements OnInit {
   readonly certificates = signal<RegularCertificateResponse[]>([]);
   readonly isLoading = signal(false);
   readonly selectedCertificate = signal<RegularCertificateResponse | null>(null);
