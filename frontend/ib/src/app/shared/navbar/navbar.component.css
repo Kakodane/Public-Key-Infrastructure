@@ -1,0 +1,40 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.navbar__brand {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.navbar__links {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.navbar__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar__email {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.navbar__logout {
+  padding: 6px 12px;
+  font-size: 13px;
+}
