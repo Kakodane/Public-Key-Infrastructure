@@ -27,6 +27,7 @@ export class NavbarComponent {
       case ROLE_ADMIN:
         return [
           { path: '/admin/ca-users', label: 'CA users' },
+          { path: '/admin/certificates', label: 'Certificates' },
           { path: '/me', label: 'Session' }
         ];
       case ROLE_CA_USER:
