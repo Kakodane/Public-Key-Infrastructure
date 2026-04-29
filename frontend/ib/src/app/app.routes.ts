@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { hasRoleGuard } from './core/auth/role.guard';
-import { ROLE_ADMIN } from './core/auth/role';
+import { ROLE_ADMIN, ROLE_REGULAR_USER } from './core/auth/role';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -30,6 +30,14 @@ export const routes: Routes = [
         (m) => m.CaUsersPageComponent
       ),
     canActivate: [authGuard, hasRoleGuard([ROLE_ADMIN])]
+  },
+  {
+    path: 'regular/certificates',
+    loadComponent: () =>
+      import('./pages/regular/my-certificates-page.component').then(
+        (m) => m.MyCertificatesPageComponent
+      ),
+    canActivate: [authGuard, hasRoleGuard([ROLE_REGULAR_USER])]
   },
   { path: '**', redirectTo: 'me' }
 ];
