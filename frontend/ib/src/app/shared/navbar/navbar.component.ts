@@ -37,7 +37,7 @@ export class NavbarComponent {
         ];
       case ROLE_REGULAR_USER:
         return [
-          { path: '/regular/certificates', label: 'My certificates' },
+          { path: '/regular/certificates', label: 'Certificates' },
           { path: '/me', label: 'Session' }
         ];
       default:

@@ -1,83 +1,134 @@
 <div class="page">
   <div class="page__container">
     <div>
-      <h1 class="page__title">My certificates</h1>
+      <h1 class="page__title">Certificates</h1>
       <p class="page__subtitle">
-        View certificates issued to your account.
+        View all certificates issued to your account.
       </p>
     </div>
 
     <section class="ti-card section">
-      <h2 class="section__title">Certificate list</h2>
-      @if (isLoading()) {
-        <p class="section__subtitle">Loading certificates...</p>
-      } @else if (certificates().length === 0) {
-        <p class="section__subtitle">No certificates available at the moment.</p>
-      }
+      <div class="section__header">
+        <div>
+          <h2 class="section__title">Certificate list</h2>
+          <p class="section__subtitle">
+          </p>
+        </div>
 
-      <div class="entity-list">
-        <div class="entity-list__heading">Your certificates</div>
-        @for (certificate of certificates(); track certificate.id) {
-          <div class="certificate-card">
-            <div class="ti-mono entity-row">
-              <span class="field">
-                <span class="field__label">Serial number</span>
-                <span>{{ certificate.serialNumber }}</span>
-              </span>
-              <span class="field">
-                <span class="field__label">Subject</span>
-                <span>{{ certificate.subjectCommonName }}</span>
-              </span>
-              <span class="field">
-                <span class="field__label">Valid to</span>
-                <span>{{ certificate.notAfter | date: 'mediumDate' }}</span>
-              </span>
-              <span class="field field--actions">
-                <button class="ti-btn ti-btn-ghost" type="button" (click)="toggleDetails(certificate.id)">
-                {{ expandedCertificateId() === certificate.id ? 'Hide details' : 'Details' }}
-                </button>
-              </span>
-            </div>
-            @if (expandedCertificateId() === certificate.id) {
-              <div class="details-grid">
-                <span class="field">
-                  <span class="field__label">Type</span>
-                  <span>{{ certificate.type }}</span>
-                </span>
-                <span class="field">
-                  <span class="field__label">Status</span>
-                  <span>{{ certificate.status }}</span>
-                </span>
-                <span class="field">
-                  <span class="field__label">Organization</span>
-                  <span>{{ certificate.organizationName }}</span>
-                </span>
-                <span class="field">
-                  <span class="field__label">Issuer serial</span>
-                  <span>{{ certificate.issuerSerialNumber ?? '-' }}</span>
-                </span>
-                <span class="field">
-                  <span class="field__label">Valid from</span>
-                  <span>{{ certificate.notBefore | date: 'medium' }}</span>
-                </span>
-                <span class="field">
-                  <span class="field__label">Valid to</span>
-                  <span>{{ certificate.notAfter | date: 'medium' }}</span>
-                </span>
-                <span class="field">
-                  <span class="field__label">Revoked at</span>
-                  <span>{{ certificate.revokedAt ? (certificate.revokedAt | date: 'medium') : '-' }}</span>
-                </span>
-                <span class="field">
-                  <span class="field__label">Revocation reason</span>
-                  <span>{{ certificate.revocationReason ?? '-' }}</span>
-                </span>
-              </div>
+        <button class="ti-btn ti-btn-ghost" type="button" (click)="loadCertificates()" [disabled]="isLoading()">
+          @if (isLoading()) { Refreshing… } @else { Refresh }
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="cert-table">
+          <thead>
+            <tr>
+              <th>Serial number</th>
+              <th>Subject</th>
+              <th>Organization</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Valid until</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (isLoading() && certificates().length === 0) {
+              <tr>
+                <td colspan="7" class="empty-state">Loading certificates…</td>
+              </tr>
+            } @else if (certificates().length === 0) {
+              <tr>
+                <td colspan="7" class="empty-state">No certificates found.</td>
+              </tr>
+            } @else {
+              @for (certificate of certificates(); track certificate.id) {
+                <tr [class.is-selected]="selectedCertificate()?.id === certificate.id">
+                  <td class="ti-mono">{{ certificate.serialNumber }}</td>
+                  <td>{{ certificate.subjectCommonName }}</td>
+                  <td>{{ certificate.organizationName }}</td>
+                  <td>
+                    <span class="ti-pill ti-pill--muted">{{ labelType(certificate.type) }}</span>
+                  </td>
+                  <td>
+                    <span
+                      class="status-pill"
+                      [class.status-pill--active]="certificate.status === 'ACTIVE'"
+                      [class.status-pill--revoked]="certificate.status === 'REVOKED'"
+                    >
+                      {{ certificate.status }}
+                    </span>
+                  </td>
+                  <td class="ti-mono">{{ formatDate(certificate.notAfter) }}</td>
+                  <td>
+                    <button class="ti-btn ti-btn-ghost details-btn" type="button" (click)="openDetails(certificate)">
+                      Details
+                    </button>
+                  </td>
+                </tr>
+              }
             }
-          </div>
-        }
+          </tbody>
+        </table>
       </div>
     </section>
 
+    @if (selectedCertificate(); as selected) {
+      <section class="ti-card section details-panel">
+        <div class="section__header details-panel__header">
+          <div>
+            <h2 class="section__title">Certificate details</h2>
+            <p class="section__subtitle">
+              Full record for certificate <span class="ti-mono">#{{ selected.id }}</span>.
+            </p>
+          </div>
+          <button class="ti-btn ti-btn-ghost" type="button" (click)="clearDetails()">Close</button>
+        </div>
+
+        <div class="details-grid">
+          <div class="details-item">
+            <span class="details-label">Serial number</span>
+            <span class="details-value ti-mono">{{ selected.serialNumber }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Subject common name</span>
+            <span class="details-value">{{ selected.subjectCommonName }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Organization</span>
+            <span class="details-value">{{ selected.organizationName }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Type</span>
+            <span class="details-value">{{ labelType(selected.type) }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Status</span>
+            <span class="details-value">{{ selected.status }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Issuer serial number</span>
+            <span class="details-value ti-mono">{{ selected.issuerSerialNumber ?? '—' }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Not before</span>
+            <span class="details-value ti-mono">{{ formatDate(selected.notBefore) }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Not after</span>
+            <span class="details-value ti-mono">{{ formatDate(selected.notAfter) }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Revoked at</span>
+            <span class="details-value ti-mono">{{ formatDate(selected.revokedAt) }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Revocation reason</span>
+            <span class="details-value">{{ selected.revocationReason ?? '—' }}</span>
+          </div>
+        </div>
+      </section>
+    }
   </div>
 </div>
