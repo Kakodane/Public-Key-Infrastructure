@@ -1,3 +1,5 @@
+import { CertificateStatus, CertificateType, RevocationReason } from "../certificate/certificate.types";
+
 export type CreateOrganizationRequest = {
   name: string;
 };
@@ -27,3 +29,17 @@ export type SetPasswordRequest = {
   token: string;
   password: string;
 };
+
+export type GetCertificateResponse={
+  id: number;
+  serialNumber: string;
+  type: CertificateType;
+  status: CertificateStatus;
+  subjectCommonName: string;
+  organizationName: string;
+  issuerSerialNumber: string | null;
+  notBefore:Date;
+  notAfter:Date;
+  revokedAt: Date | null;
+  revocationReason:RevocationReason | null;
+}
