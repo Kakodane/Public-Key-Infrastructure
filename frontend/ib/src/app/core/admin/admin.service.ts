@@ -5,6 +5,7 @@ import {
   CreateCaUserResponse,
   CreateOrganizationRequest,
   CreateOrganizationResponse,
+  GetCertificateResponse,
   GetOrgsResponse
 } from './admin.types';
 
@@ -22,5 +23,9 @@ export class AdminService {
 
   getOrganizations() {
     return this.http.get<GetOrgsResponse[]>('/api/admin/organizations');
+  }
+
+  getCertificates(){
+    return this.http.get<GetCertificateResponse[]>('/api/admin/certificates');
   }
 }
