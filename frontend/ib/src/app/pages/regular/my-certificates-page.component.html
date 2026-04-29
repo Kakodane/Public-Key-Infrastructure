@@ -18,19 +18,62 @@
       <div class="entity-list">
         <div class="entity-list__heading">Your certificates</div>
         @for (certificate of certificates(); track certificate.id) {
-          <div class="ti-mono entity-row">
-            <span class="field">
-              <span class="field__label">Serial number</span>
-              <span>{{ certificate.serialNumber }}</span>
-            </span>
-            <span class="field">
-              <span class="field__label">Subject</span>
-              <span>{{ certificate.subjectCommonName }}</span>
-            </span>
-            <span class="field">
-              <span class="field__label">Valid to</span>
-              <span>{{ certificate.notAfter | date: 'mediumDate' }}</span>
-            </span>
+          <div class="certificate-card">
+            <div class="ti-mono entity-row">
+              <span class="field">
+                <span class="field__label">Serial number</span>
+                <span>{{ certificate.serialNumber }}</span>
+              </span>
+              <span class="field">
+                <span class="field__label">Subject</span>
+                <span>{{ certificate.subjectCommonName }}</span>
+              </span>
+              <span class="field">
+                <span class="field__label">Valid to</span>
+                <span>{{ certificate.notAfter | date: 'mediumDate' }}</span>
+              </span>
+              <span class="field field--actions">
+                <button class="ti-btn ti-btn-ghost" type="button" (click)="toggleDetails(certificate.id)">
+                {{ expandedCertificateId() === certificate.id ? 'Hide details' : 'Details' }}
+                </button>
+              </span>
+            </div>
+            @if (expandedCertificateId() === certificate.id) {
+              <div class="details-grid">
+                <span class="field">
+                  <span class="field__label">Type</span>
+                  <span>{{ certificate.type }}</span>
+                </span>
+                <span class="field">
+                  <span class="field__label">Status</span>
+                  <span>{{ certificate.status }}</span>
+                </span>
+                <span class="field">
+                  <span class="field__label">Organization</span>
+                  <span>{{ certificate.organizationName }}</span>
+                </span>
+                <span class="field">
+                  <span class="field__label">Issuer serial</span>
+                  <span>{{ certificate.issuerSerialNumber ?? '-' }}</span>
+                </span>
+                <span class="field">
+                  <span class="field__label">Valid from</span>
+                  <span>{{ certificate.notBefore | date: 'medium' }}</span>
+                </span>
+                <span class="field">
+                  <span class="field__label">Valid to</span>
+                  <span>{{ certificate.notAfter | date: 'medium' }}</span>
+                </span>
+                <span class="field">
+                  <span class="field__label">Revoked at</span>
+                  <span>{{ certificate.revokedAt ? (certificate.revokedAt | date: 'medium') : '-' }}</span>
+                </span>
+                <span class="field">
+                  <span class="field__label">Revocation reason</span>
+                  <span>{{ certificate.revocationReason ?? '-' }}</span>
+                </span>
+              </div>
+            }
           </div>
         }
       </div>

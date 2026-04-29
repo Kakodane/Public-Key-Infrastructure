@@ -13,6 +13,7 @@ import { RegularCertificateResponse } from '../../core/regular/regular.types';
 export class MyCertificatesPageComponent implements OnInit {
   certificates = signal<RegularCertificateResponse[]>([]);
   isLoading = signal(false);
+  expandedCertificateId = signal<number | null>(null);
 
   constructor(private readonly regularService: RegularService) {}
 
@@ -27,5 +28,11 @@ export class MyCertificatesPageComponent implements OnInit {
         this.isLoading.set(false);
       }
     });
+  }
+
+  toggleDetails(certificateId: number): void {
+    this.expandedCertificateId.set(
+      this.expandedCertificateId() === certificateId ? null : certificateId
+    );
   }
 }

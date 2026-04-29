@@ -54,11 +54,27 @@
 .entity-row {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   padding: 10px 12px;
   background: var(--elevated);
   border: 1px solid var(--border);
   border-radius: 6px;
+  font-size: 12px;
+}
+
+.certificate-card {
+  display: grid;
+  gap: 8px;
+}
+
+.details-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
   font-size: 12px;
 }
 
@@ -74,13 +90,8 @@
   letter-spacing: 0.04em;
 }
 
-.page__footer {
-  display: flex;
-  gap: 10px;
+.field--actions {
   align-items: center;
+  justify-items: center;
 }
 
-.page__footer-label {
-  color: var(--muted);
-  font-size: 12px;
-}
