@@ -115,6 +115,22 @@ html, body {
   padding: 24px;
 }
 
+/* navbar link */
+.ti-nav-link {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.ti-nav-link:hover { background: var(--elevated); }
+.ti-nav-link--active {
+  background: var(--elevated);
+  color: var(--blue);
+}
+
 /* data row inside a card */
 .ti-data-row {
   display: flex;

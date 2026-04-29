@@ -1,10 +1,7 @@
 package com.ib.controller.user;
 
 import com.ib.dto.auth.GetCertificateResponse;
-import com.ib.dto.user.CreateCAUserRequest;
-import com.ib.dto.user.CreateCAUserResponse;
-import com.ib.dto.user.CreateOrganizationRequest;
-import com.ib.dto.user.CreateOrganizationResponse;
+import com.ib.dto.user.*;
 import com.ib.service.user.AdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,5 +38,9 @@ public class AdminController {
     public ResponseEntity<CreateOrganizationResponse> createOrganization(@Valid @RequestBody CreateOrganizationRequest request) {
         CreateOrganizationResponse response = adminService.createOrganization(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+    @GetMapping("/organizations")
+    public ResponseEntity<List<GetOrgsResponse>> getOrgs() {
+        return ResponseEntity.ok(adminService.getOrgs());
     }
 }

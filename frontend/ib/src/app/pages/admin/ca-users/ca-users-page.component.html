@@ -1,0 +1,126 @@
+<div class="page">
+  <div class="page__container">
+
+    <div>
+      <div class="ti-pill ti-mono ti-pill--info">/api/admin</div>
+      <h1 class="page__title">CA user registration</h1>
+      <p class="page__subtitle">
+        Create an organization, then add CA users into it. Each CA user
+        receives an activation link by email.
+      </p>
+    </div>
+
+    <!-- Organization -->
+    <section class="ti-card section">
+      <h2 class="section__title">1. Organization</h2>
+      <p class="section__subtitle">
+        Skip if the org already exists — you'll select it below.
+      </p>
+
+      <form (ngSubmit)="submitOrg()" [formGroup]="orgForm" class="org-form">
+        <label class="field">
+          <span class="field__label">Name</span>
+          <input
+            class="ti-input"
+            type="text"
+            placeholder="Acme Corp"
+            formControlName="name"
+          />
+        </label>
+        <button class="ti-btn" type="submit" [disabled]="orgBusy()">
+          @if (orgBusy()) { Creating… } @else { Create organization }
+        </button>
+      </form>
+
+      @if (orgError()) {
+        <div class="ti-err ti-mono feedback">{{ orgError() }}</div>
+      }
+      @if (orgOk()) {
+        <div class="ti-ok ti-mono feedback">{{ orgOk() }}</div>
+      }
+
+      @if (orgs().length > 0) {
+        <div class="entity-list">
+          <div class="entity-list__heading">Existing organizations</div>
+          @for (o of orgs(); track o.id) {
+            <div class="ti-mono entity-row">
+              <span class="entity-row__id">id={{ o.id }}</span>
+              <span>{{ o.name }}</span>
+            </div>
+          }
+        </div>
+      } @else if (orgsLoading()) {
+        <div class="ti-mono entity-list__loading">Loading organizations…</div>
+      }
+    </section>
+
+    <section class="ti-card section">
+      <h2 class="section__title">2. CA user</h2>
+      <p class="section__subtitle">
+        The user will receive a one-time activation link valid for 24 hours.
+      </p>
+
+      <form (ngSubmit)="submitCa()" [formGroup]="caForm" class="ca-form">
+        <div class="ca-form__name-row">
+          <label class="field">
+            <span class="field__label">First name</span>
+            <input class="ti-input" type="text" formControlName="firstName" />
+          </label>
+          <label class="field">
+            <span class="field__label">Last name</span>
+            <input class="ti-input" type="text" formControlName="lastName" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">Email</span>
+          <input
+            class="ti-input ti-mono"
+            type="email"
+            placeholder="user@org.tld"
+            formControlName="email"
+          />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Organization</span>
+          <select class="ti-input ti-mono" formControlName="orgId">
+            <option [ngValue]="null" disabled>— select —</option>
+            @for (o of orgs(); track o.id) {
+              <option [ngValue]="o.id">{{ o.name }} (id {{ o.id }})</option>
+            }
+          </select>
+          @if (orgs().length === 0 && !orgsLoading()) {
+            <span class="ti-mono field__hint">
+              No organizations yet — create one above.
+            </span>
+          }
+        </label>
+
+        @if (caError()) {
+          <div class="ti-err ti-mono">{{ caError() }}</div>
+        }
+        @if (caOk()) {
+          <div class="ti-ok ti-mono">{{ caOk() }}</div>
+        }
+
+        <button class="ti-btn" type="submit" [disabled]="caBusy()">
+          @if (caBusy()) { Creating… } @else { Create CA user }
+        </button>
+      </form>
+
+      @if (createdCas().length > 0) {
+        <div class="entity-list">
+          <div class="entity-list__heading">Created in this session</div>
+          @for (u of createdCas(); track u.id) {
+            <div class="ti-mono entity-row">
+              <span class="entity-row__id">id={{ u.id }}</span>
+              <span>{{ u.email }}</span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
+  </div>
+</div>
