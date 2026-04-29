@@ -1,0 +1,147 @@
+<div class="page">
+  <div class="page__container">
+    <div>
+      <div class="ti-pill ti-mono ti-pill--info">/api/admin/certificates</div>
+      <h1 class="page__title">Certificates</h1>
+      <p class="page__subtitle">
+        Review all certificates returned by the backend and inspect the full payload in the details panel.
+      </p>
+    </div>
+
+    <section class="ti-card section">
+      <div class="section__header">
+        <div>
+          <h2 class="section__title">All certificates</h2>
+          <p class="section__subtitle">
+            Table view of the certificates delivered by <span class="ti-mono">GET /api/admin/certificates</span>.
+          </p>
+        </div>
+
+        <button class="ti-btn ti-btn-ghost" type="button" (click)="loadCertificates()" [disabled]="loading()">
+          @if (loading()) { Refreshing… } @else { Refresh }
+        </button>
+      </div>
+
+      @if (error()) {
+        <div class="ti-err ti-mono feedback">{{ error() }}</div>
+      }
+
+      <div class="table-wrap">
+        <table class="cert-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Serial number</th>
+              <th>Subject</th>
+              <th>Organization</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Valid until</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading() && !hasCertificates()) {
+              <tr>
+                <td colspan="8" class="empty-state">Loading certificates…</td>
+              </tr>
+            } @else if (certificates().length === 0) {
+              <tr>
+                <td colspan="8" class="empty-state">No certificates returned by the backend.</td>
+              </tr>
+            } @else {
+              @for (certificate of certificates(); track certificate.id) {
+                <tr [class.is-selected]="selectedCertificate()?.id === certificate.id">
+                  <td class="ti-mono">{{ certificate.id }}</td>
+                  <td class="ti-mono">{{ certificate.serialNumber }}</td>
+                  <td>{{ certificate.subjectCommonName }}</td>
+                  <td>{{ certificate.organizationName }}</td>
+                  <td>
+                    <span class="ti-pill ti-pill--muted">{{ labelType(certificate.type) }}</span>
+                  </td>
+                  <td>
+                    <span
+                      class="status-pill"
+                      [class.status-pill--active]="certificate.status === 'ACTIVE'"
+                      [class.status-pill--revoked]="certificate.status === 'REVOKED'"
+                    >
+                      {{ labelStatus(certificate.status) }}
+                    </span>
+                  </td>
+                  <td class="ti-mono">{{ formatDate(certificate.notAfter) }}</td>
+                  <td>
+                    <button class="ti-btn ti-btn-ghost details-btn" type="button" (click)="openDetails(certificate)">
+                      Details
+                    </button>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    @if (selectedCertificate(); as selected) {
+      <section class="ti-card section details-panel">
+        <div class="section__header details-panel__header">
+          <div>
+            <h2 class="section__title">Certificate details</h2>
+            <p class="section__subtitle">
+              Full record for certificate <span class="ti-mono">#{{ selected.id }}</span>.
+            </p>
+          </div>
+
+          <button class="ti-btn ti-btn-ghost" type="button" (click)="clearDetails()">Close</button>
+        </div>
+
+        <div class="details-grid">
+          <div class="details-item">
+            <span class="details-label">ID</span>
+            <span class="details-value ti-mono">{{ selected.id }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Serial number</span>
+            <span class="details-value ti-mono">{{ selected.serialNumber }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Subject common name</span>
+            <span class="details-value">{{ selected.subjectCommonName }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Organization</span>
+            <span class="details-value">{{ selected.organizationName }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Type</span>
+            <span class="details-value">{{ labelType(selected.type) }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Status</span>
+            <span class="details-value">{{ labelStatus(selected.status) }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Issuer serial number</span>
+            <span class="details-value ti-mono">{{ selected.issuerSerialNumber ?? '—' }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Not before</span>
+            <span class="details-value ti-mono">{{ formatDate(selected.notBefore) }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Not after</span>
+            <span class="details-value ti-mono">{{ formatDate(selected.notAfter) }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Revoked at</span>
+            <span class="details-value ti-mono">{{ formatDate(selected.revokedAt) }}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-label">Revocation reason</span>
+            <span class="details-value">{{ labelRevocationReason(selected.revocationReason) }}</span>
+          </div>
+        </div>
+      </section>
+    }
+  </div>
+</div>
