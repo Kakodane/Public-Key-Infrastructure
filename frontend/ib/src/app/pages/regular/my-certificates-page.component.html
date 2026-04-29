@@ -1,6 +1,40 @@
 <div class="page">
   <div class="page__container">
-    <h1 class="page__title">My certificates</h1>
-    <p class="page__subtitle">Certificates page is temporarily unavailable.</p>
+    <div>
+      <h1 class="page__title">My certificates</h1>
+      <p class="page__subtitle">
+        View certificates issued to your account.
+      </p>
+    </div>
+
+    <section class="ti-card section">
+      <h2 class="section__title">Certificate list</h2>
+      @if (isLoading()) {
+        <p class="section__subtitle">Loading certificates...</p>
+      } @else if (certificates().length === 0) {
+        <p class="section__subtitle">No certificates available at the moment.</p>
+      }
+
+      <div class="entity-list">
+        <div class="entity-list__heading">Your certificates</div>
+        @for (certificate of certificates(); track certificate.id) {
+          <div class="ti-mono entity-row">
+            <span class="field">
+              <span class="field__label">Serial number</span>
+              <span>{{ certificate.serialNumber }}</span>
+            </span>
+            <span class="field">
+              <span class="field__label">Subject</span>
+              <span>{{ certificate.subjectCommonName }}</span>
+            </span>
+            <span class="field">
+              <span class="field__label">Valid to</span>
+              <span>{{ certificate.notAfter | date: 'mediumDate' }}</span>
+            </span>
+          </div>
+        }
+      </div>
+    </section>
+
   </div>
 </div>
