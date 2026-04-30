@@ -1,0 +1,29 @@
+@if (me()) {
+  <nav class="navbar">
+    <a routerLink="/me" class="ti-mono navbar__brand">PKI</a>
+
+    <div class="navbar__links">
+      @for (link of links(); track link.path) {
+        <a
+          [routerLink]="link.path"
+          routerLinkActive="ti-nav-link--active"
+          class="ti-nav-link"
+        >
+          {{ link.label }}
+        </a>
+      }
+    </div>
+
+    <div class="navbar__user">
+      <span class="ti-mono navbar__email">{{ me()?.email }}</span>
+      <span class="ti-pill ti-pill--violet">{{ me()?.role }}</span>
+      <button
+        class="ti-btn ti-btn-ghost navbar__logout"
+        type="button"
+        (click)="logout()"
+      >
+        Logout
+      </button>
+    </div>
+  </nav>
+}

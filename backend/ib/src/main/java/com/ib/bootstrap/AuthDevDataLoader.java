@@ -81,5 +81,26 @@ public class AuthDevDataLoader implements CommandLineRunner {
 				.firstName("Regular")
 				.lastName("User")
 				.build());
+
+		userRepository.save(User.builder()
+				.email("user2@ib.local")
+				.passwordHash(hash)
+				.role(Role.REGULAR_USER)
+				.organization(org)
+				.enabled(true)
+				.emailVerified(true)
+				.firstName("Regular")
+				.lastName("User Two")
+				.build());
+		userRepository.save(User.builder()
+				.email("user3@ib.local")
+				.passwordHash(hash)
+				.role(Role.REGULAR_USER)
+				.organization(org)
+				.enabled(true)
+				.emailVerified(true)
+				.firstName("Regular")
+				.lastName("User Three")
+				.build());
 	}
 }

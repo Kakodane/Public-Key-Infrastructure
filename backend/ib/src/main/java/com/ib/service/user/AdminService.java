@@ -8,10 +8,7 @@ import com.ib.domain.entity.ValidationToken;
 import com.ib.domain.repository.CertificateRepository;
 import com.ib.domain.repository.OrganizationRepository;
 import com.ib.dto.auth.GetCertificateResponse;
-import com.ib.dto.user.CreateCAUserRequest;
-import com.ib.dto.user.CreateCAUserResponse;
-import com.ib.dto.user.CreateOrganizationRequest;
-import com.ib.dto.user.CreateOrganizationResponse;
+import com.ib.dto.user.*;
 import com.ib.exception.ResourceAlreadyExistsException;
 import com.ib.service.EmailService;
 import com.ib.service.ValidationTokenService;
@@ -69,5 +66,13 @@ public class AdminService {
         organizationKeyService.getOrCreateOrgKey(organization);
         Organization saved = organizationRepository.save(organization);
         return new CreateOrganizationResponse(saved.getId(), saved.getName());
+    }
+    public List<GetOrgsResponse> getOrgs(){
+        List<Organization> orgs= organizationRepository.findAll();
+        List<GetOrgsResponse> orgsResponses= new ArrayList<>();
+        for(Organization org:orgs){
+            orgsResponses.add(new GetOrgsResponse(org.getId(),org.getName()));
+        }
+        return  orgsResponses;
     }
 }
