@@ -49,6 +49,15 @@ public class CertificateService {
 				.orElseThrow(() -> new EntityNotFoundException(
 						"Organization not found: " + request.organizationId()));
 
+		boolean alreadyHasActiveRoot = certificateRepository
+				.existsByTypeAndStatus(
+						CertificateType.ROOT,
+						CertificateStatus.ACTIVE);
+		if (alreadyHasActiveRoot) {
+			throw new CertificateIssuanceException(
+					"Already has an active ROOT certificate.");
+		}
+
 		GeneratedCertificate generated = generationService.generateRoot(request);
 
 		Certificate certificate = Certificate.builder()
@@ -117,9 +126,9 @@ public class CertificateService {
 				.orElseThrow(() -> new EntityNotFoundException(
 						"Issuer not found: " + request.issuerCertificateId()));
 
-		User owner = userRepository.findById(request.ownerUserId())
+		User owner = userRepository.findByEmailIgnoreCase(request.userEmail())
 				.orElseThrow(() -> new EntityNotFoundException(
-						"Owner user not found: " + request.ownerUserId()));
+						"Owner user not found: " + request.userEmail()));
 
 		authorizeEndEntityIssuance(caller, owner, certificateIssuer);
 		issuerValidator.validateForIssuing(

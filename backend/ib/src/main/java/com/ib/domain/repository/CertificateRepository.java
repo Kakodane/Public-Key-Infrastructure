@@ -17,5 +17,7 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
 
 	List<Certificate> findAllByOrganization_IdAndStatus(Long organizationId, CertificateStatus status);
 
+	boolean existsByTypeAndStatus(CertificateType type, CertificateStatus status);
+
     List<Certificate> findAll();
 }
