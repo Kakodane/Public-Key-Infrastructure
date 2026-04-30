@@ -1,22 +1,15 @@
 package com.ib.bootstrap;
 
 import com.ib.crypto.OrganizationKeyService;
-import com.ib.domain.embeddable.X509SubjectFields;
-import com.ib.domain.entity.Certificate;
 import com.ib.domain.entity.Organization;
 import com.ib.domain.entity.User;
-import com.ib.domain.enums.CertificateStatus;
-import com.ib.domain.enums.CertificateType;
 import com.ib.domain.enums.Role;
-import com.ib.domain.repository.CertificateRepository;
 import com.ib.domain.repository.OrganizationRepository;
 import com.ib.domain.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-
-import java.time.Instant;
 
 /**
  * Seeds demo users (checkpoint: direct DB inserts). Password for all: {@value #DEMO_PASSWORD}.
@@ -31,20 +24,17 @@ public class AuthDevDataLoader implements CommandLineRunner {
 	private final OrganizationRepository organizationRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final OrganizationKeyService organizationKeyService;
-    private final CertificateRepository certificateRepository;
 
 	public AuthDevDataLoader(
 			UserRepository userRepository,
 			OrganizationRepository organizationRepository,
 			PasswordEncoder passwordEncoder,
-			OrganizationKeyService organizationKeyService,
-            CertificateRepository certificateRepo
+			OrganizationKeyService organizationKeyService
 	) {
 		this.userRepository = userRepository;
 		this.organizationRepository = organizationRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.organizationKeyService = organizationKeyService;
-        this.certificateRepository=certificateRepo;
 	}
 
 	@Override
@@ -91,68 +81,5 @@ public class AuthDevDataLoader implements CommandLineRunner {
 				.firstName("Regular")
 				.lastName("User")
 				.build());
-
-        Certificate rootCa = certificateRepository.save(
-                Certificate.builder()
-                        .serialNumber("ROOT-CA-0001")
-                        .type(CertificateType.ROOT)
-                        .status(CertificateStatus.ACTIVE)
-                        .organization(org)
-                        .owner(null)
-                        .issuer(null)
-                        .subject(X509SubjectFields.builder()
-                                .commonName("Demo Root CA")
-                                .organization("IB Demo PKI")
-                                .organizationalUnit("Certificate Authority")
-                                .country("RS")
-                                .emailAddress("ca@ib.local")
-                                .build())
-                        .notBefore(Instant.now().minusSeconds(86400))
-                        .notAfter(Instant.now().plusSeconds(315360000)) // 10 years
-                        .certificatePem("-----BEGIN CERTIFICATE-----\nROOT_CA_DEMO\n-----END CERTIFICATE-----")
-                        .privateKeyKeyVersion(1)
-                        .build()
-        );
-
-        Certificate caCert = certificateRepository.save(
-                Certificate.builder()
-                        .serialNumber("CA-0001")
-                        .type(CertificateType.INTERMEDIATE)
-                        .status(CertificateStatus.ACTIVE)
-                        .organization(org)
-                        .owner(null)
-                        .issuer(rootCa)
-                        .subject(X509SubjectFields.builder()
-                                .commonName("Demo Intermediate CA")
-                                .organization("IB Demo PKI")
-                                .organizationalUnit("Issuing CA")
-                                .country("RS")
-                                .emailAddress("issuing-ca@ib.local")
-                                .build())
-                        .notBefore(Instant.now().minusSeconds(3600))
-                        .notAfter(Instant.now().plusSeconds(315360000))
-                        .certificatePem("-----BEGIN CERTIFICATE-----\nINTERMEDIATE_CA_DEMO\n-----END CERTIFICATE-----")
-                        .privateKeyKeyVersion(1)
-                        .build()
-        );
-        certificateRepository.save(Certificate.builder()
-                .serialNumber("USER-0001")
-                .type(CertificateType.END_ENTITY)
-                .status(CertificateStatus.ACTIVE)
-                .organization(org)
-                .owner(userRepository.findByEmailIgnoreCase("user@ib.local").orElseThrow())
-                .issuer(caCert)
-                .subject(X509SubjectFields.builder()
-                        .commonName("user@ib.local")
-                        .organization("IB Demo Organization")
-                        .organizationalUnit("Users")
-                        .country("RS")
-                        .emailAddress("user@ib.local")
-                        .build())
-                .notBefore(Instant.now().minusSeconds(600))
-                .notAfter(Instant.now().plusSeconds(86400 * 365))
-                .certificatePem("-----BEGIN CERTIFICATE-----\nUSER_CERT_DEMO\n-----END CERTIFICATE-----")
-                .privateKeyKeyVersion(1)
-                .build());
 	}
 }
