@@ -1,0 +1,188 @@
+<div class="page">
+  <div class="page__container">
+
+    <div>
+      <div class="ti-pill ti-mono ti-pill--info">/api/certificates</div>
+      <h1 class="page__title">Issue certificate</h1>
+      <p class="page__subtitle">
+        Build the certificate request — subject, validity, and extensions — and submit.
+      </p>
+    </div>
+
+    <form (ngSubmit)="submit()" [formGroup]="form" class="issue-form">
+
+      <section class="ti-card section">
+        <h2 class="section__title">Type & target</h2>
+        <p class="section__subtitle">
+          Selecting a type pre-fills the standard CA capabilities below.
+        </p>
+
+        <div class="row">
+          <label class="field">
+            <span class="field__label">Certificate type</span>
+            <select class="ti-input ti-mono" formControlName="type">
+              <option [value]="CertificateType.ROOT">ROOT (self-signed CA)</option>
+              <option [value]="CertificateType.INTERMEDIATE">INTERMEDIATE (CA)</option>
+              <option [value]="CertificateType.END_ENTITY">END_ENTITY</option>
+            </select>
+          </label>
+
+          @if (needsOrganization()) {
+            <label class="field">
+              <span class="field__label">Organization</span>
+              <select class="ti-input ti-mono" formControlName="organizationId">
+                <option [ngValue]="null" disabled>— select —</option>
+                @for (o of orgs(); track o.id) {
+                  <option [ngValue]="o.id">{{ o.name }} (id {{ o.id }})</option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+
+        @if (needsIssuer()) {
+          <label class="field">
+            <span class="field__label">Issuer certificate</span>
+            <select class="ti-input ti-mono" formControlName="issuerCertificateId">
+              <option [ngValue]="null" disabled>— select —</option>
+              @for (c of availableIssuers(); track c.id) {
+                <option [ngValue]="c.id">
+                  {{ c.subjectCommonName }} (#{{ c.id }} · {{ c.type }})
+                </option>
+              }
+            </select>
+            @if (availableIssuers().length === 0) {
+              <span class="ti-mono field__hint">
+                No active CA certificates available — create a ROOT first.
+              </span>
+            }
+          </label>
+        }
+
+        @if (needsOwnerUser()) {
+          <label class="field">
+            <span class="field__label">Owner user email</span>
+            <input
+              class="ti-input ti-mono"
+              type="email"
+              placeholder="user@example.com"
+              formControlName="userEmail"
+            />
+            <span class="ti-mono field__hint">
+              Email of the user who will own this end-entity certificate.
+            </span>
+          </label>
+        }
+      </section>
+
+      <section class="ti-card section" formGroupName="subject">
+        <h2 class="section__title">Subject (X.500)</h2>
+
+        <label class="field">
+          <span class="field__label">Common name (CN) *</span>
+          <input class="ti-input" type="text" placeholder="example.com" formControlName="commonName" />
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span class="field__label">Organization (O)</span>
+            <input class="ti-input" type="text" formControlName="organization" />
+          </label>
+          <label class="field">
+            <span class="field__label">Org unit (OU)</span>
+            <input class="ti-input" type="text" formControlName="organizationalUnit" />
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field">
+            <span class="field__label">Country (C, 2 letters)</span>
+            <input class="ti-input ti-mono" type="text" maxlength="2" placeholder="RS" formControlName="country" />
+          </label>
+          <label class="field">
+            <span class="field__label">Email (E)</span>
+            <input class="ti-input ti-mono" type="email" formControlName="emailAddress" />
+          </label>
+        </div>
+      </section>
+
+      <section class="ti-card section">
+        <h2 class="section__title">Validity</h2>
+        <div class="row">
+          <label class="field">
+            <span class="field__label">Not before</span>
+            <input class="ti-input ti-mono" type="date" formControlName="notBefore" />
+          </label>
+          <label class="field">
+            <span class="field__label">Not after</span>
+            <input class="ti-input ti-mono" type="date" formControlName="notAfter" />
+          </label>
+        </div>
+      </section>
+
+      <section class="ti-card section" formGroupName="extensions">
+        <h2 class="section__title">Extensions</h2>
+
+        <div class="ext-block">
+          <h3 class="ext-block__title">Basic Constraints</h3>
+          <label class="checkbox">
+            <input type="checkbox" formControlName="isCa" />
+            <span>CA (this certificate may sign other certificates)</span>
+          </label>
+          <label class="field" style="max-width: 240px;">
+            <span class="field__label">Path length constraint</span>
+            <input
+              class="ti-input ti-mono"
+              type="number"
+              min="0"
+              placeholder="empty = no constraint"
+              formControlName="pathLenConstraint"
+            />
+            <span class="ti-mono field__hint">
+              Max number of intermediate CAs that can follow this one.
+              Leave empty for unconstrained. Ignored when CA is unchecked.
+            </span>
+          </label>
+        </div>
+
+        <div class="ext-block" formGroupName="keyUsages">
+          <h3 class="ext-block__title">Key Usage</h3>
+          <div class="checkbox-grid">
+            @for (b of keyUsageOptions; track b.id) {
+              <label class="checkbox">
+                <input type="checkbox" [formControlName]="b.id" />
+                <span class="ti-mono">{{ b.label }}</span>
+              </label>
+            }
+          </div>
+        </div>
+
+        <div class="ext-block" formGroupName="extendedKeyUsages">
+          <h3 class="ext-block__title">Extended Key Usage</h3>
+          <div class="checkbox-grid">
+            @for (b of extKeyUsageOptions; track b.id) {
+              <label class="checkbox">
+                <input type="checkbox" [formControlName]="b.id" />
+                <span class="ti-mono">{{ b.label }}</span>
+              </label>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="ti-card section">
+        @if (error()) {
+          <div class="ti-err ti-mono feedback">{{ error() }}</div>
+        }
+        @if (success()) {
+          <div class="ti-ok ti-mono">{{ success() }}</div>
+        }
+
+        <button class="ti-btn" type="submit" [disabled]="busy()">
+          @if (busy()) { Issuing… } @else { Issue certificate }
+        </button>
+      </section>
+    </form>
+
+  </div>
+</div>

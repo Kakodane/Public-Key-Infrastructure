@@ -47,5 +47,13 @@ export const routes: Routes = [
       ),
     canActivate: [authGuard, hasRoleGuard([ROLE_ADMIN])]
   },
+  {
+    path: 'admin/certificates/issue',
+    loadComponent: () =>
+      import('./pages/admin/certificates-issue/certificates-issue-page.component').then(
+        (m) => m.CertificatesIssuePageComponent
+      ),
+    canActivate: [authGuard, hasRoleGuard([ROLE_ADMIN])]
+  },
   { path: '**', redirectTo: 'me' }
 ];

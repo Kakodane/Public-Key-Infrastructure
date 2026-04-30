@@ -37,7 +37,7 @@ public class CertificateService {
 	private final CertificatePrivateKeyCipher privateKeyCipher;
 	private final OrganizationRepository organizationRepository;
 	private final CertificateRepository certificateRepository;
-    private final UserRepository userRepository;
+	private final UserRepository userRepository;
 
 	@Transactional
 	public GetCertificateResponse issueRoot(CreateRootCertificateRequest request) {
@@ -45,8 +45,18 @@ public class CertificateService {
 		authorizeRootIssuance(caller);
 		validateExtensionsOrThrow(request.extensions(), CertificateType.ROOT);
 
-		Organization organization = organizationRepository.findById(request.organizationId()).orElseThrow(() -> new EntityNotFoundException(
-                "Organization not found: " + request.organizationId()));
+		Organization organization = organizationRepository.findById(request.organizationId())
+				.orElseThrow(() -> new EntityNotFoundException(
+						"Organization not found: " + request.organizationId()));
+
+		boolean alreadyHasActiveRoot = certificateRepository
+				.existsByTypeAndStatus(
+						CertificateType.ROOT,
+						CertificateStatus.ACTIVE);
+		if (alreadyHasActiveRoot) {
+			throw new CertificateIssuanceException(
+					"Already has an active ROOT certificate.");
+		}
 
 		GeneratedCertificate generated = generationService.generateRoot(request);
 
@@ -74,34 +84,37 @@ public class CertificateService {
 		User caller = requireCallerUser();
 		validateExtensionsOrThrow(request.extensions(), CertificateType.INTERMEDIATE);
 
-        Organization organization = organizationRepository.findById(request.organizationId()).orElseThrow(() -> new EntityNotFoundException(
-                "Organization not found: " + request.organizationId()));
-        Certificate certificateIssuer= certificateRepository.findById(request.issuerCertificateId()).orElseThrow(()-> new EntityNotFoundException(
-                "Issuer not found: "+ request.issuerCertificateId()));
+		Organization organization = organizationRepository.findById(request.organizationId())
+				.orElseThrow(() -> new EntityNotFoundException(
+						"Organization not found: " + request.organizationId()));
+		Certificate certificateIssuer = certificateRepository.findById(request.issuerCertificateId())
+				.orElseThrow(() -> new EntityNotFoundException(
+						"Issuer not found: " + request.issuerCertificateId()));
 
 		authorizeIntermediateIssuance(caller, organization, certificateIssuer);
-        issuerValidator.validateForIssuing(certificateIssuer,request.notBefore(),request.notAfter());
+		issuerValidator.validateForIssuing(
+				certificateIssuer, request.notBefore(), request.notAfter(), CertificateType.INTERMEDIATE);
 
-        GeneratedCertificate generated = generationService.generateIntermediate(request, certificateIssuer,privateKeyCipher.loadPrivateKey(certificateIssuer.getId()));
+		GeneratedCertificate generated = generationService.generateIntermediate(
+				request, certificateIssuer, privateKeyCipher.loadPrivateKey(certificateIssuer.getId()));
 
+		Certificate certificate = Certificate.builder()
+				.serialNumber(generated.serialNumber())
+				.type(CertificateType.INTERMEDIATE)
+				.status(CertificateStatus.ACTIVE)
+				.organization(organization)
+				.owner(null)
+				.issuer(certificateIssuer)
+				.subject(toSubjectFields(request.subject()))
+				.notBefore(request.notBefore())
+				.notAfter(request.notAfter())
+				.certificatePem(generated.certificatePem())
+				.build();
 
-        Certificate certificate = Certificate.builder()
-                .serialNumber(generated.serialNumber())
-                .type(CertificateType.INTERMEDIATE)
-                .status(CertificateStatus.ACTIVE)
-                .organization(organization)
-                .owner(null)
-                .issuer(certificateIssuer)
-                .subject(toSubjectFields(request.subject()))
-                .notBefore(request.notBefore())
-                .notAfter(request.notAfter())
-                .certificatePem(generated.certificatePem())
-                .build();
+		privateKeyCipher.attachEncryptedPrivateKey(certificate, generated.pkcs8PrivateKey());
 
-        privateKeyCipher.attachEncryptedPrivateKey(certificate, generated.pkcs8PrivateKey());
-
-        Certificate saved = certificateRepository.save(certificate);
-        return new GetCertificateResponse(saved);
+		Certificate saved = certificateRepository.save(certificate);
+		return new GetCertificateResponse(saved);
 	}
 
 	@Transactional
@@ -109,34 +122,38 @@ public class CertificateService {
 		User caller = requireCallerUser();
 		validateExtensionsOrThrow(request.extensions(), CertificateType.END_ENTITY);
 
-        Certificate certificateIssuer= certificateRepository.findById(request.issuerCertificateId()).orElseThrow(()-> new EntityNotFoundException(
-                "Issuer not found: "+ request.issuerCertificateId()));
+		Certificate certificateIssuer = certificateRepository.findById(request.issuerCertificateId())
+				.orElseThrow(() -> new EntityNotFoundException(
+						"Issuer not found: " + request.issuerCertificateId()));
 
-		User owner = userRepository.findById(request.ownerUserId())
-				.orElseThrow(() -> new EntityNotFoundException("Owner user not found: " + request.ownerUserId()));
+		User owner = userRepository.findByEmailIgnoreCase(request.userEmail())
+				.orElseThrow(() -> new EntityNotFoundException(
+						"Owner user not found: " + request.userEmail()));
 
 		authorizeEndEntityIssuance(caller, owner, certificateIssuer);
-        issuerValidator.validateForIssuing(certificateIssuer,request.notBefore(),request.notAfter());
+		issuerValidator.validateForIssuing(
+				certificateIssuer, request.notBefore(), request.notAfter(), CertificateType.END_ENTITY);
 
-        GeneratedCertificate generated = generationService.generateEndEntity(request, certificateIssuer,privateKeyCipher.loadPrivateKey(certificateIssuer.getId()));
+		GeneratedCertificate generated = generationService.generateEndEntity(
+				request, certificateIssuer, privateKeyCipher.loadPrivateKey(certificateIssuer.getId()));
 
-        Certificate certificate = Certificate.builder()
-                .serialNumber(generated.serialNumber())
-                .type(CertificateType.END_ENTITY)
-                .status(CertificateStatus.ACTIVE)
-                .organization(owner.getOrganization())
-                .owner(owner)
-                .issuer(certificateIssuer)
-                .subject(toSubjectFields(request.subject()))
-                .notBefore(request.notBefore())
-                .notAfter(request.notAfter())
-                .certificatePem(generated.certificatePem())
-                .build();
+		Certificate certificate = Certificate.builder()
+				.serialNumber(generated.serialNumber())
+				.type(CertificateType.END_ENTITY)
+				.status(CertificateStatus.ACTIVE)
+				.organization(owner.getOrganization())
+				.owner(owner)
+				.issuer(certificateIssuer)
+				.subject(toSubjectFields(request.subject()))
+				.notBefore(request.notBefore())
+				.notAfter(request.notAfter())
+				.certificatePem(generated.certificatePem())
+				.build();
 
-        privateKeyCipher.attachEncryptedPrivateKey(certificate, generated.pkcs8PrivateKey());
+		privateKeyCipher.attachEncryptedPrivateKey(certificate, generated.pkcs8PrivateKey());
 
-        Certificate saved = certificateRepository.save(certificate);
-        return new GetCertificateResponse(saved);
+		Certificate saved = certificateRepository.save(certificate);
+		return new GetCertificateResponse(saved);
 	}
 
 	private User requireCallerUser() {

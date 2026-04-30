@@ -18,18 +18,51 @@ import java.util.Set;
 @Service
 public class CertificateIssuerValidator {
 
-	public void validateForIssuing(Certificate issuer, Instant childNotBefore, Instant childNotAfter) {
+	private static final int KEY_USAGE_KEY_CERT_SIGN = 5;
+
+	private static final int MAX_CHAIN_DEPTH = 16;
+
+	public void validateForIssuing(
+			Certificate issuer,
+			Instant childNotBefore,
+			Instant childNotAfter,
+			CertificateType childType
+	) {
+		requireArgs(issuer, childNotBefore, childNotAfter, childType);
+		validateChildWindow(childNotBefore, childNotAfter);
+		validateIssuerStatusAndType(issuer);
+		validateIssuerWindow(issuer, childNotBefore, childNotAfter);
+		validateIssuerSignatureChainStrict(issuer);
+		validateIssuerExtensions(issuer);
+
+		if (childType == CertificateType.INTERMEDIATE) {
+			validatePathLengthBudget(issuer);
+		}
+	}
+
+	private void requireArgs(Certificate issuer,
+	                         Instant childNotBefore,
+	                         Instant childNotAfter,
+	                         CertificateType childType) {
 		if (issuer == null) {
 			throw new IllegalArgumentException("issuer must not be null.");
 		}
 		if (childNotBefore == null || childNotAfter == null) {
 			throw new IllegalArgumentException("Child validity window must be provided.");
 		}
+		if (childType == null) {
+			throw new IllegalArgumentException("Child certificate type must be provided.");
+		}
+	}
+
+	private void validateChildWindow(Instant childNotBefore, Instant childNotAfter) {
 		if (!childNotBefore.isBefore(childNotAfter)) {
 			throw new CertificateIssuanceException(
 					"Child certificate notBefore must be strictly before notAfter.");
 		}
+	}
 
+	private void validateIssuerStatusAndType(Certificate issuer) {
 		if (issuer.getStatus() != CertificateStatus.ACTIVE) {
 			throw new CertificateIssuanceException(
 					"Issuer certificate is not active (status=" + issuer.getStatus() + ").");
@@ -37,23 +70,25 @@ public class CertificateIssuerValidator {
 		if (issuer.getRevokedAt() != null) {
 			throw new CertificateIssuanceException("Issuer certificate is revoked.");
 		}
-
 		if (issuer.getType() == CertificateType.END_ENTITY) {
 			throw new CertificateIssuanceException(
 					"End-entity certificates cannot issue other certificates.");
 		}
+	}
 
-		Instant now = Instant.now();
+	private void validateIssuerWindow(Certificate issuer,
+	                                  Instant childNotBefore,
+	                                  Instant childNotAfter) {
 		if (issuer.getNotBefore() == null || issuer.getNotAfter() == null) {
 			throw new CertificateIssuanceException("Issuer validity period is missing.");
 		}
+		Instant now = Instant.now();
 		if (now.isBefore(issuer.getNotBefore())) {
 			throw new CertificateIssuanceException("Issuer certificate is not yet valid.");
 		}
 		if (now.isAfter(issuer.getNotAfter())) {
 			throw new CertificateIssuanceException("Issuer certificate has expired.");
 		}
-
 		if (childNotBefore.isBefore(issuer.getNotBefore())) {
 			throw new CertificateIssuanceException(
 					"Child notBefore cannot predate the issuer's notBefore.");
@@ -62,16 +97,13 @@ public class CertificateIssuerValidator {
 			throw new CertificateIssuanceException(
 					"Child notAfter cannot extend beyond the issuer's notAfter.");
 		}
-
-		validateIssuerSignatureChainStrict(issuer);
 	}
 
 	private void validateIssuerSignatureChainStrict(Certificate issuer) {
 		Set<Long> visitedIds = new HashSet<>();
 		Certificate current = issuer;
 
-		// Hard bound to prevent infinite loops if data is corrupted.
-		for (int depth = 0; depth < 16; depth++) {
+		for (int depth = 0; depth < MAX_CHAIN_DEPTH; depth++) {
 			if (current.getId() != null && !visitedIds.add(current.getId())) {
 				throw new CertificateIssuanceException("Issuer chain contains a cycle.");
 			}
@@ -84,23 +116,66 @@ public class CertificateIssuerValidator {
 				throw new CertificateIssuanceException("Issuer chain contains a revoked certificate.");
 			}
 
-			X509Certificate currentCert = parsePemX509Strict(current.getCertificatePem(), "issuer certificate PEM");
+			X509Certificate currentCert = parsePem(current.getCertificatePem(), "issuer certificate PEM");
 			Certificate parent = current.getIssuer();
 
 			if (parent == null) {
-				verifySelfSignedStrict(currentCert);
+				verifySelfSigned(currentCert);
 				return;
 			}
 
-			X509Certificate parentCert = parsePemX509Strict(parent.getCertificatePem(), "parent issuer certificate PEM");
-			verifySignedByStrict(currentCert, parentCert.getPublicKey());
+			X509Certificate parentCert = parsePem(parent.getCertificatePem(), "parent issuer certificate PEM");
+			verifySignedBy(currentCert, parentCert.getPublicKey());
 			current = parent;
 		}
 
 		throw new CertificateIssuanceException("Issuer chain is too deep or malformed.");
 	}
 
-	private static X509Certificate parsePemX509Strict(String pem, String label) {
+	private void validateIssuerExtensions(Certificate issuer) {
+		X509Certificate x509 = parsePem(issuer.getCertificatePem(), "issuer certificate PEM");
+
+		if (x509.getBasicConstraints() < 0) {
+			throw new CertificateIssuanceException(
+					"Issuer is not a CA (BasicConstraints CA:true is missing).");
+		}
+
+		boolean[] keyUsage = x509.getKeyUsage();
+		if (keyUsage == null
+				|| keyUsage.length <= KEY_USAGE_KEY_CERT_SIGN
+				|| !keyUsage[KEY_USAGE_KEY_CERT_SIGN]) {
+			throw new CertificateIssuanceException(
+					"Issuer KeyUsage must include keyCertSign.");
+		}
+	}
+
+	private void validatePathLengthBudget(Certificate issuer) {
+		int remaining = computeRemainingPathLength(issuer);
+		if (remaining <= 0) {
+			throw new CertificateIssuanceException(
+					"Path length budget exhausted — this chain cannot accept another intermediate CA.");
+		}
+	}
+
+	private int computeRemainingPathLength(Certificate issuer) {
+		int min = Integer.MAX_VALUE;
+		int distance = 0;
+		Certificate cur = issuer;
+		while (cur != null) {
+			int pl = parsePem(cur.getCertificatePem(), "issuer certificate PEM").getBasicConstraints();
+			if (pl != Integer.MAX_VALUE && pl >= 0) {
+				int remaining = pl - distance;
+				if (remaining < min) {
+					min = remaining;
+				}
+			}
+			cur = cur.getIssuer();
+			distance++;
+		}
+		return min;
+	}
+
+	private static X509Certificate parsePem(String pem, String label) {
 		if (pem == null || pem.isBlank()) {
 			throw new CertificateIssuanceException(label + " is missing.");
 		}
@@ -119,16 +194,16 @@ public class CertificateIssuerValidator {
 		}
 	}
 
-	private static void verifySelfSignedStrict(X509Certificate cert) {
+	private static void verifySelfSigned(X509Certificate cert) {
 		try {
-			PublicKey publicKey = cert.getPublicKey();
-			cert.verify(publicKey);
+			cert.verify(cert.getPublicKey());
 		} catch (Exception e) {
-			throw new CertificateIssuanceException("Root issuer certificate is not self-signed or signature is invalid.", e);
+			throw new CertificateIssuanceException(
+					"Root issuer certificate is not self-signed or signature is invalid.", e);
 		}
 	}
 
-	private static void verifySignedByStrict(X509Certificate child, PublicKey issuerPublicKey) {
+	private static void verifySignedBy(X509Certificate child, PublicKey issuerPublicKey) {
 		try {
 			child.verify(issuerPublicKey);
 		} catch (Exception e) {
