@@ -22,27 +22,35 @@
     <hr style="border: 0; border-top: 1px solid var(--border); margin: 16px 0;" />
 
     <form (ngSubmit)="submit()" [formGroup]="form" style="display: grid; gap: 12px;">
-      <label style="display: grid; gap: 6px;">
-        <span style="color: var(--text-2); font-size: 12px;">Email</span>
+      <div style="display: grid; gap: 6px;">
+        <label style="color: var(--text-2); font-size: 12px;" for="login-email">Email</label>
         <input
+          id="login-email"
           class="ti-input ti-mono"
           type="email"
           autocomplete="username"
           placeholder="user@ib.local"
           formControlName="email"
         />
-      </label>
+        @if (emailErrors) {
+          <span class="field-error">{{ emailErrors }}</span>
+        }
+      </div>
 
-      <label style="display: grid; gap: 6px;">
-        <span style="color: var(--text-2); font-size: 12px;">Password</span>
+      <div style="display: grid; gap: 6px;">
+        <label style="color: var(--text-2); font-size: 12px;" for="login-password">Password</label>
         <input
+          id="login-password"
           class="ti-input ti-mono"
           type="password"
           autocomplete="current-password"
           placeholder="••••••••"
           formControlName="password"
         />
-      </label>
+        @if (passwordErrors) {
+          <span class="field-error">{{ passwordErrors }}</span>
+        }
+      </div>
 
       @if (error()) {
         <div

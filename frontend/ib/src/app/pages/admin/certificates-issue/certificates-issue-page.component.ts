@@ -281,7 +281,10 @@ export class CertificatesIssuePageComponent implements OnInit {
         this.form.reset();
         this.loadIssuers();
       },
-      error: (err: any) => this.error.set(extractError(err)),
+      error: (err: any) => {
+        this.error.set(extractError(err));
+        this.busy.set(false);
+      },
       complete: () => this.busy.set(false)
     };
   }
