@@ -6,4 +6,8 @@ public class CertificateIssuanceException extends RuntimeException {
 		super(message);
 	}
 
+	public CertificateIssuanceException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
 }
