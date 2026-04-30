@@ -38,8 +38,8 @@ export type GetCertificateResponse={
   subjectCommonName: string;
   organizationName: string;
   issuerSerialNumber: string | null;
-  notBefore:Date;
-  notAfter:Date;
-  revokedAt: Date | null;
+  notBefore: string;
+  notAfter: string;
+  revokedAt: string | null;
   revocationReason:RevocationReason | null;
 }
