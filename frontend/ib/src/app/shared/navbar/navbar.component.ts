@@ -28,6 +28,7 @@ export class NavbarComponent {
         return [
           { path: '/admin/ca-users', label: 'CA users' },
           { path: '/admin/certificates', label: 'Certificates' },
+          { path: '/admin/certificates/issue', label: 'Issue certificate' },
           { path: '/me', label: 'Session' }
         ];
       case ROLE_CA_USER:
