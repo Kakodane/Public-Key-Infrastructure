@@ -1,6 +1,9 @@
 package com.ib.service.certificate;
 
 import com.ib.domain.entity.Certificate;
+import com.ib.dto.certificate.CertificateExtendedKeyUsage;
+import com.ib.dto.certificate.CertificateExtensionsRequest;
+import com.ib.dto.certificate.CertificateKeyUsage;
 import com.ib.dto.certificate.CreateEndEntityCertificateRequest;
 import com.ib.dto.certificate.CreateIntermediateCertificateRequest;
 import com.ib.dto.certificate.CreateRootCertificateRequest;
@@ -9,8 +12,10 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.KeyUsage;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
@@ -34,6 +39,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Date;
+import java.util.Set;
 
 
 @Service
@@ -65,8 +71,7 @@ public class CertificateGenerationService {
 			);
 
 			JcaX509ExtensionUtils extUtils = new JcaX509ExtensionUtils();
-			builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true));
-			builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign));
+			addRequestedExtensions(builder, request.extensions(), true);
 			builder.addExtension(Extension.subjectKeyIdentifier, false, extUtils.createSubjectKeyIdentifier(keyPair.getPublic()));
 			builder.addExtension(Extension.authorityKeyIdentifier, false, extUtils.createAuthorityKeyIdentifier(keyPair.getPublic()));
 
@@ -104,8 +109,7 @@ public class CertificateGenerationService {
 			);
 
 			JcaX509ExtensionUtils extUtils = new JcaX509ExtensionUtils();
-			builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true));
-			builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign));
+			addRequestedExtensions(builder, request.extensions(), true);
 			builder.addExtension(Extension.subjectKeyIdentifier, false, extUtils.createSubjectKeyIdentifier(keyPair.getPublic()));
 			builder.addExtension(Extension.authorityKeyIdentifier, false, extUtils.createAuthorityKeyIdentifier(issuerCert.getPublicKey()));
 
@@ -145,9 +149,7 @@ public class CertificateGenerationService {
 			);
 
 			JcaX509ExtensionUtils extUtils = new JcaX509ExtensionUtils();
-			builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false));
-			builder.addExtension(Extension.keyUsage, true,
-					new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
+			addRequestedExtensions(builder, request.extensions(), false);
 			builder.addExtension(Extension.subjectKeyIdentifier, false, extUtils.createSubjectKeyIdentifier(keyPair.getPublic()));
 			builder.addExtension(Extension.authorityKeyIdentifier, false, extUtils.createAuthorityKeyIdentifier(issuerCert.getPublicKey()));
 
@@ -185,6 +187,83 @@ public class CertificateGenerationService {
 
 	private static boolean hasValue(String s) {
 		return s != null && !s.isBlank();
+	}
+
+	private static void addRequestedExtensions(
+			JcaX509v3CertificateBuilder builder,
+			CertificateExtensionsRequest extensions,
+			boolean defaultIsCa
+	) throws Exception {
+		boolean isCa = extensions != null && extensions.isCa() != null ? extensions.isCa() : defaultIsCa;
+
+		BasicConstraints basicConstraints;
+		if (isCa) {
+			Integer pathLen = extensions != null ? extensions.pathLenConstraint() : null;
+			basicConstraints = pathLen != null ? new BasicConstraints(pathLen) : new BasicConstraints(true);
+		} else {
+			basicConstraints = new BasicConstraints(false);
+		}
+		builder.addExtension(Extension.basicConstraints, true, basicConstraints);
+
+		KeyUsage keyUsage = buildKeyUsage(extensions != null ? extensions.keyUsages() : null, defaultIsCa);
+		builder.addExtension(Extension.keyUsage, true, keyUsage);
+
+		ExtendedKeyUsage eku = buildExtendedKeyUsage(extensions != null ? extensions.extendedKeyUsages() : null);
+		if (eku != null) {
+			builder.addExtension(Extension.extendedKeyUsage, false, eku);
+		}
+	}
+
+	private static KeyUsage buildKeyUsage(Set<CertificateKeyUsage> requested, boolean defaultIsCa) {
+		if (requested == null || requested.isEmpty()) {
+			if (defaultIsCa) {
+				return new KeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign);
+			}
+			return new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment);
+		}
+
+		int mask = 0;
+		for (CertificateKeyUsage ku : requested) {
+			if (ku == null) {
+				continue;
+			}
+			mask |= switch (ku) {
+				case DIGITAL_SIGNATURE -> KeyUsage.digitalSignature;
+				case NON_REPUDIATION -> KeyUsage.nonRepudiation;
+				case KEY_ENCIPHERMENT -> KeyUsage.keyEncipherment;
+				case DATA_ENCIPHERMENT -> KeyUsage.dataEncipherment;
+				case KEY_AGREEMENT -> KeyUsage.keyAgreement;
+				case KEY_CERT_SIGN -> KeyUsage.keyCertSign;
+				case CRL_SIGN -> KeyUsage.cRLSign;
+				case ENCIPHER_ONLY -> KeyUsage.encipherOnly;
+				case DECIPHER_ONLY -> KeyUsage.decipherOnly;
+			};
+		}
+		return new KeyUsage(mask);
+	}
+
+	private static ExtendedKeyUsage buildExtendedKeyUsage(Set<CertificateExtendedKeyUsage> requested) {
+		if (requested == null || requested.isEmpty()) {
+			return null;
+		}
+
+		KeyPurposeId[] purposes = requested.stream()
+				.filter(e -> e != null)
+				.map(e -> switch (e) {
+					case SERVER_AUTH -> KeyPurposeId.id_kp_serverAuth;
+					case CLIENT_AUTH -> KeyPurposeId.id_kp_clientAuth;
+					case CODE_SIGNING -> KeyPurposeId.id_kp_codeSigning;
+					case EMAIL_PROTECTION -> KeyPurposeId.id_kp_emailProtection;
+					case TIME_STAMPING -> KeyPurposeId.id_kp_timeStamping;
+					case OCSP_SIGNING -> KeyPurposeId.id_kp_OCSPSigning;
+				})
+				.distinct()
+				.toArray(KeyPurposeId[]::new);
+
+		if (purposes.length == 0) {
+			return null;
+		}
+		return new ExtendedKeyUsage(purposes);
 	}
 
 	private KeyPair generateRsaKeyPair(int keySize) throws Exception {
