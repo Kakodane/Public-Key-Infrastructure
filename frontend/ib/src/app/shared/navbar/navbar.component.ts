@@ -34,6 +34,7 @@ export class NavbarComponent {
       case ROLE_CA_USER:
         return [
           { path: '/ca/certificates', label: 'My org certificates' },
+          { path: '/ca/certificates/issue', label: 'Issue certificate' },
           { path: '/me', label: 'Session' }
         ];
       case ROLE_REGULAR_USER:

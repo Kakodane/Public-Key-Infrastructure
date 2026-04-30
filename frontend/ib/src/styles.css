@@ -56,6 +56,16 @@ html, body {
 }
 .ti-input::placeholder { color: var(--muted); }
 .ti-input:focus { border-color: var(--blue); }
+.ti-input.ng-touched.ng-invalid { border-color: rgba(248, 81, 73, 0.7); }
+.ti-input.ng-touched.ng-invalid:focus { border-color: var(--crit); box-shadow: 0 0 0 2px rgba(248, 81, 73, 0.15); }
+
+/* inline field-level validation error */
+.field-error {
+  color: var(--crit);
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  line-height: 1.4;
+}
 
 /* primary button */
 .ti-btn {
