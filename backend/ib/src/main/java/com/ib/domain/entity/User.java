@@ -62,6 +62,13 @@ public class User {
 	@Builder.Default
 	private boolean emailVerified = false;
 
+	@Column(name = "two_factor_enabled", nullable = false)
+	@Builder.Default
+	private boolean twoFactorEnabled = false;
+
+	@Column(name = "totp_secret")
+	private String totpSecret;
+
 	@Column(name = "first_name")
 	private String firstName;
 
