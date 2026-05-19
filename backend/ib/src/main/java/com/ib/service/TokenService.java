@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 
@@ -25,6 +26,9 @@ public class TokenService {
 	public static final String CLAIM_TYP = "typ";
 	public static final String CLAIM_ROLE = "role";
 	public static final String TYP_ACCESS = "access";
+	public static final String TYP_2FA_CHALLENGE = "2fa_challenge";
+
+	private static final Duration TWO_FACTOR_CHALLENGE_TTL = Duration.ofMinutes(5);
 
 	private final JwtProperties jwtProperties;
 	private final SecretKey signingKey;
@@ -68,6 +72,30 @@ public class TokenService {
 		List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(roleAuthority));
 		AuthenticatedUser principal = new AuthenticatedUser(userId, email, authorities);
 		return new UsernamePasswordAuthenticationToken(principal, null, authorities);
+	}
+
+	public String createTwoFactorChallengeToken(User user) {
+		var now = new Date();
+		var exp = new Date(now.getTime() + TWO_FACTOR_CHALLENGE_TTL.toMillis());
+		return Jwts.builder()
+				.subject(user.getId().toString())
+				.claim(CLAIM_TYP, TYP_2FA_CHALLENGE)
+				.issuedAt(now)
+				.expiration(exp)
+				.signWith(signingKey)
+				.compact();
+	}
+
+	public Long parseTwoFactorChallengeToken(String token) {
+		Claims claims = Jwts.parser()
+				.verifyWith(signingKey)
+				.build()
+				.parseSignedClaims(token)
+				.getPayload();
+		if (!TYP_2FA_CHALLENGE.equals(claims.get(CLAIM_TYP, String.class))) {
+			throw new JwtException("Invalid token type");
+		}
+		return Long.parseLong(claims.getSubject());
 	}
 
 	public long accessTokenExpiresInSeconds() {

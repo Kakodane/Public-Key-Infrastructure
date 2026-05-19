@@ -1,8 +1,12 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, map, of, tap } from 'rxjs';
+import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { TokenStorageService } from './token-storage.service';
-import { MeResponse, TokenResponse } from './auth.types';
+import { LoginResponse, MeResponse, TwoFactorSetupResponse } from './auth.types';
+
+export type LoginResult =
+  | { twoFactorRequired: true; twoFactorToken: string }
+  | { twoFactorRequired: false };
 
 type AuthState =
   | { status: 'anonymous' }
@@ -28,19 +32,22 @@ export class AuthService {
   }
 
   login(email: string, password: string) {
-    return this.http
-      .post<TokenResponse>('/api/auth/login', { email, password })
-      .pipe(
-        tap((r) =>
-          this.tokenStorage.write({
-            accessToken: r.accessToken,
-            accessExpiresInSeconds: r.expiresIn
-          })
-        ),
-        tap(() => this.state.set({ status: 'anonymous' })),
-        map(() => void 0),
-        tap(() => this.loadMe().subscribe())
-      );
+    return this.http.post<LoginResponse>('/api/auth/login', { email, password }).pipe(
+      switchMap((r) => {
+        if (r.twoFactorRequired) {
+          return of({
+            twoFactorRequired: true as const,
+            twoFactorToken: r.twoFactorToken!
+          });
+        }
+        this.tokenStorage.write({
+          accessToken: r.accessToken!,
+          accessExpiresInSeconds: r.expiresIn!
+        });
+        this.state.set({ status: 'anonymous' });
+        return this.loadMe().pipe(map(() => ({ twoFactorRequired: false as const })));
+      })
+    );
   }
 
   loadMe() {
@@ -52,6 +59,53 @@ export class AuthService {
           message: err?.error?.message ?? 'Failed to load session'
         });
         return of(null);
+      })
+    );
+  }
+
+  verifyTwoFactor(twoFactorToken: string, code: string) {
+    return this.http
+      .post<LoginResponse>('/api/auth/2fa/verify', { twoFactorToken, code })
+      .pipe(
+        tap((r) =>
+          this.tokenStorage.write({
+            accessToken: r.accessToken!,
+            accessExpiresInSeconds: r.expiresIn!
+          })
+        ),
+        tap(() => this.state.set({ status: 'anonymous' })),
+        switchMap(() => this.loadMe().pipe(map(() => void 0)))
+      );
+  }
+
+  setup2fa() {
+    return this.http.post<TwoFactorSetupResponse>('/api/2fa/setup', {});
+  }
+
+  confirm2fa(code: string) {
+    return this.http.post<void>('/api/2fa/confirm', { code }).pipe(
+      tap(() => {
+        const current = this.me();
+        if (current) {
+          this.state.set({
+            status: 'authenticated',
+            me: { ...current, twoFactorEnabled: true }
+          });
+        }
+      })
+    );
+  }
+
+  disable2fa(code: string) {
+    return this.http.post<void>('/api/2fa/disable', { code }).pipe(
+      tap(() => {
+        const current = this.me();
+        if (current) {
+          this.state.set({
+            status: 'authenticated',
+            me: { ...current, twoFactorEnabled: false }
+          });
+        }
       })
     );
   }

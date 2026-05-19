@@ -75,6 +75,189 @@
             </div>
           </div>
         </div>
+
+        @if (showTwoFactorSection()) {
+          <div class="ti-card" style="padding: 14px; display: grid; gap: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <div>
+                <h2 style="margin: 0 0 4px; font-size: 16px; letter-spacing: -0.02em;">
+                  Two-factor authentication
+                </h2>
+                <p style="margin: 0; color: var(--text-2); font-size: 12px;">
+                  Protect sign-in with a TOTP code from Google or Microsoft Authenticator.
+                </p>
+              </div>
+              <span
+                class="ti-pill ti-mono"
+                [style.border-color]="me.twoFactorEnabled ? 'rgba(63, 185, 80, 0.45)' : 'var(--border)'"
+                [style.color]="me.twoFactorEnabled ? 'var(--success)' : 'var(--text-2)'"
+              >
+                {{ me.twoFactorEnabled ? 'Enabled' : 'Disabled' }}
+              </span>
+            </div>
+
+            @if (twoFactorError()) {
+              <div
+                class="ti-card"
+                style="
+                  padding: 10px 12px;
+                  border-color: rgba(248, 81, 73, 0.35);
+                  background: rgba(248, 81, 73, 0.06);
+                "
+                role="alert"
+              >
+                <div class="ti-mono" style="color: var(--critical); font-size: 12px;">
+                  {{ twoFactorError() }}
+                </div>
+              </div>
+            }
+
+            @if (twoFactorStep() === 'idle') {
+              @if (me.twoFactorEnabled) {
+                <button
+                  class="ti-btn"
+                  type="button"
+                  style="width: fit-content; border-color: rgba(248, 81, 73, 0.55);"
+                  [disabled]="twoFactorBusy()"
+                  (click)="startDisable()"
+                >
+                  Disable 2FA
+                </button>
+              } @else {
+                <button
+                  class="ti-btn"
+                  type="button"
+                  style="width: fit-content;"
+                  [disabled]="twoFactorBusy()"
+                  (click)="startSetup()"
+                >
+                  @if (twoFactorBusy()) { Preparing… } @else { Enable 2FA }
+                </button>
+              }
+            }
+
+            @if (twoFactorStep() === 'setup' && qrCodeUri(); as uri) {
+              <div style="display: grid; gap: 12px;">
+                <p style="margin: 0; color: var(--text-2); font-size: 12px;">
+                  Scan this QR code with your authenticator app, then enter the 6-digit code to confirm.
+                </p>
+
+                <div style="display: flex; justify-content: center; padding: 8px;">
+                  <qrcode [qrdata]="uri" [width]="200" errorCorrectionLevel="M"></qrcode>
+                </div>
+
+                @if (setupSecret(); as secret) {
+                  <div style="display: grid; gap: 4px;">
+                    <span style="color: var(--text-2); font-size: 12px;">Manual entry secret</span>
+                    <code
+                      class="ti-mono"
+                      style="
+                        background: rgba(33, 38, 45, 0.65);
+                        border: 1px solid var(--border);
+                        border-radius: 10px;
+                        padding: 10px 12px;
+                        word-break: break-all;
+                      "
+                    >
+                      {{ secret }}
+                    </code>
+                  </div>
+                }
+
+                <form
+                  (ngSubmit)="confirmSetup()"
+                  [formGroup]="confirmForm"
+                  style="display: grid; gap: 10px; max-width: 280px;"
+                >
+                  <div style="display: grid; gap: 6px;">
+                    <label style="color: var(--text-2); font-size: 12px;" for="2fa-confirm-code">
+                      Verification code
+                    </label>
+                    <input
+                      id="2fa-confirm-code"
+                      class="ti-input ti-mono"
+                      type="text"
+                      inputmode="numeric"
+                      autocomplete="one-time-code"
+                      maxlength="6"
+                      placeholder="000000"
+                      formControlName="code"
+                    />
+                    @if (confirmCodeErrors) {
+                      <span class="field-error">{{ confirmCodeErrors }}</span>
+                    }
+                  </div>
+
+                  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="ti-btn" type="submit" [disabled]="twoFactorBusy()">
+                      @if (twoFactorBusy()) { Confirming… } @else { Confirm 2FA }
+                    </button>
+                    <button
+                      class="ti-btn"
+                      type="button"
+                      style="border-color: var(--border); background: transparent;"
+                      [disabled]="twoFactorBusy()"
+                      (click)="cancelTwoFactorAction()"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            }
+
+            @if (twoFactorStep() === 'disable') {
+              <form
+                (ngSubmit)="confirmDisable()"
+                [formGroup]="disableForm"
+                style="display: grid; gap: 10px; max-width: 280px;"
+              >
+                <p style="margin: 0; color: var(--text-2); font-size: 12px;">
+                  Enter your current authenticator code to disable two-factor authentication.
+                </p>
+
+                <div style="display: grid; gap: 6px;">
+                  <label style="color: var(--text-2); font-size: 12px;" for="2fa-disable-code">
+                    Authentication code
+                  </label>
+                  <input
+                    id="2fa-disable-code"
+                    class="ti-input ti-mono"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    maxlength="6"
+                    placeholder="000000"
+                    formControlName="code"
+                  />
+                  @if (disableCodeErrors) {
+                    <span class="field-error">{{ disableCodeErrors }}</span>
+                  }
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                  <button
+                    class="ti-btn"
+                    type="submit"
+                    style="border-color: rgba(248, 81, 73, 0.55);"
+                    [disabled]="twoFactorBusy()"
+                  >
+                    @if (twoFactorBusy()) { Disabling… } @else { Confirm disable }
+                  </button>
+                  <button
+                    class="ti-btn"
+                    type="button"
+                    style="border-color: var(--border); background: transparent;"
+                    [disabled]="twoFactorBusy()"
+                    (click)="cancelTwoFactorAction()"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            }
+          </div>
+        }
       </div>
     } @else {
       <div class="ti-card" style="padding: 12px;">
@@ -85,4 +268,3 @@
     }
   </div>
 </div>
-
