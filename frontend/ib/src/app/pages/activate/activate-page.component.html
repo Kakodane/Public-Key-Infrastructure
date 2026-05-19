@@ -1,0 +1,75 @@
+<div class="page">
+  <div class="ti-card card">
+    <div>
+      <div class="ti-pill ti-mono ti-pill--info">activation</div>
+      <h1 class="card__title">Activate your account</h1>
+      <p class="card__subtitle">
+        Provide the private key that pairs with the public key you registered with.
+      </p>
+    </div>
+
+    <hr class="divider" />
+
+    @if (loading()) {
+      <div class="ti-mono" style="color: var(--muted);">Loading challenge…</div>
+    } @else if (ok()) {
+      <div class="ti-card success-box">
+        <div class="ti-mono ti-ok">Account activated. Redirecting to login…</div>
+      </div>
+    } @else if (!challenge()) {
+      <div class="ti-card error-box" role="alert">
+        <div class="ti-mono error-box__text">{{ error() ?? 'Activation link could not be loaded.' }}</div>
+        <p style="margin-top: 12px; font-size: 12px;">
+          <a routerLink="/login">Back to login</a>
+        </p>
+      </div>
+    } @else {
+      <div class="ti-data-row">
+        <span class="ti-data-row__label">Email</span>
+        <span class="ti-mono">{{ challenge()!.email }}</span>
+      </div>
+      <div class="ti-data-row">
+        <span class="ti-data-row__label">Key ends in</span>
+        <span class="ti-mono" style="color: var(--muted);">{{ keyFingerprint }}</span>
+      </div>
+
+      <form (ngSubmit)="submit()" [formGroup]="form" class="form" style="margin-top: 16px;">
+        <label class="field">
+          <span class="field__label">Private key file (.pem)</span>
+          <input
+            class="ti-input"
+            type="file"
+            accept=".pem,.key,application/x-pem-file,text/plain"
+            (change)="onFileSelected($event)"
+          />
+        </label>
+
+        <label class="field">
+          <span class="field__label">…or paste it here</span>
+          <textarea
+            class="ti-input ti-mono"
+            formControlName="privateKeyPem"
+            rows="8"
+            placeholder="-----BEGIN PRIVATE KEY-----&#10;..."
+            style="font-size: 11px; resize: vertical;"
+          ></textarea>
+        </label>
+
+        <div class="password-hint">
+          Your private key is used locally in your browser. It is never sent to
+          the server.
+        </div>
+
+        @if (error()) {
+          <div class="ti-card error-box" role="alert">
+            <div class="ti-mono error-box__text">{{ error() }}</div>
+          </div>
+        }
+
+        <button class="ti-btn" type="submit" [disabled]="busy()">
+          @if (busy()) { Activating… } @else { Activate }
+        </button>
+      </form>
+    }
+  </div>
+</div>

@@ -1,0 +1,192 @@
+<div class="page">
+  <div class="ti-card card">
+    <div>
+      <div class="ti-pill ti-mono ti-pill--info">registration</div>
+      <h1 class="card__title">Create an account</h1>
+      <p class="card__subtitle">
+        Regular users only. CA users are provisioned by an administrator.
+      </p>
+    </div>
+
+    <hr class="divider" />
+
+    @if (ok()) {
+      <div class="ti-card success-box">
+        <div class="ti-mono ti-ok">Account submitted.</div>
+        <p style="margin-top: 8px; font-size: 13px; color: var(--text);">
+          Check your email for an activation link. The link expires in 24 hours.
+          You'll need the private key you saved to complete activation.
+        </p>
+        <p style="margin-top: 12px; font-size: 12px;">
+          <a routerLink="/login">Back to login</a>
+        </p>
+      </div>
+    } @else {
+      <form (ngSubmit)="submit()" [formGroup]="form" class="form">
+        <label class="field">
+          <span class="field__label">Email</span>
+          <input
+            class="ti-input ti-mono"
+            type="email"
+            autocomplete="email"
+            placeholder="user@example.com"
+            formControlName="email"
+          />
+          @if (emailErrors) {
+            <span class="field-error">{{ emailErrors }}</span>
+          }
+        </label>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <label class="field">
+            <span class="field__label">First name</span>
+            <input
+              class="ti-input ti-mono"
+              type="text"
+              autocomplete="given-name"
+              formControlName="firstName"
+            />
+            @if (form.controls.firstName.touched && form.controls.firstName.invalid) {
+              <span class="field-error">{{ requiredError }}</span>
+            }
+          </label>
+          <label class="field">
+            <span class="field__label">Last name</span>
+            <input
+              class="ti-input ti-mono"
+              type="text"
+              autocomplete="family-name"
+              formControlName="lastName"
+            />
+            @if (form.controls.lastName.touched && form.controls.lastName.invalid) {
+              <span class="field-error">{{ requiredError }}</span>
+            }
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">Organization</span>
+          <input
+            class="ti-input ti-mono"
+            type="text"
+            autocomplete="organization"
+            placeholder="Must already exist"
+            formControlName="organizationName"
+          />
+          @if (form.controls.organizationName.touched && form.controls.organizationName.invalid) {
+            <span class="field-error">{{ requiredError }}</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Password</span>
+          <input
+            class="ti-input ti-mono"
+            type="password"
+            autocomplete="new-password"
+            placeholder="••••••••"
+            formControlName="password"
+          />
+          @if (passwordErrors) {
+            <span class="field-error">{{ passwordErrors }}</span>
+          }
+        </label>
+
+        <label class="field">
+          <span class="field__label">Confirm password</span>
+          <input
+            class="ti-input ti-mono"
+            type="password"
+            autocomplete="new-password"
+             placeholder="••••••••"
+            formControlName="confirmPassword"
+          />
+        </label>
+
+        <div class="password-hint">
+          At least 8 characters, with one lowercase, one uppercase, one digit
+          and one special character.
+        </div>
+
+        @if (form.errors?.['mismatch'] && form.get('confirmPassword')?.touched) {
+          <div class="ti-err ti-mono">Passwords don't match.</div>
+        }
+
+        <hr class="divider" />
+
+        <div>
+          <div class="field__label" style="margin-bottom: 8px;">RSA-2048 key pair</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button
+              type="button"
+              class="ti-btn"
+              [class.ti-btn-ghost]="keyMode() !== 'generate'"
+              (click)="setMode('generate')"
+            >
+              Generate
+            </button>
+            <button
+              type="button"
+              class="ti-btn"
+              [class.ti-btn-ghost]="keyMode() !== 'paste'"
+              (click)="setMode('paste')"
+            >
+              Paste my own
+            </button>
+          </div>
+
+          @if (keyMode() === 'generate') {
+            <button
+              type="button"
+              class="ti-btn-ghost ti-btn"
+              (click)="generateAndDownload()"
+              [disabled]="generating()"
+              style="width: 100%; margin-bottom: 10px;"
+            >
+              @if (generating()) { Generating… } @else { Generate keypair & download private key }
+            </button>
+            @if (downloadedHint()) {
+              <div class="ti-mono ti-ok" style="font-size: 12px; margin-bottom: 8px;">
+                ✓ {{ downloadedHint() }}
+              </div>
+            }
+            <div class="password-hint" style="color: var(--warn);">
+              Save this file. It will be required to activate your account and to
+              recover a forgotten password. We do not keep a copy.
+            </div>
+          } @else {
+            <div class="password-hint" style="margin-bottom: 6px;">
+              Paste your public key in PEM format (—BEGIN PUBLIC KEY— …).
+            </div>
+          }
+
+          <label class="field" style="margin-top: 10px;">
+            <span class="field__label">Public key (PEM)</span>
+            <textarea
+              class="ti-input ti-mono"
+              formControlName="publicKeyPem"
+              rows="6"
+              [readonly]="keyMode() === 'generate'"
+              [placeholder]="keyMode() === 'paste' ? '-----BEGIN PUBLIC KEY-----\n...' : 'Click “Generate keypair” above.'"
+              style="font-size: 11px; resize: vertical;"
+            ></textarea>
+          </label>
+        </div>
+
+        @if (error()) {
+          <div class="ti-card error-box" role="alert">
+            <div class="ti-mono error-box__text">{{ error() }}</div>
+          </div>
+        }
+
+        <button class="ti-btn" type="submit" [disabled]="busy()">
+          @if (busy()) { Submitting… } @else { Create account }
+        </button>
+
+        <div style="text-align: center; font-size: 12px; color: var(--muted); margin-top: 4px;">
+          Already have an account? <a routerLink="/login">Sign in</a>
+        </div>
+      </form>
+    }
+  </div>
+</div>
