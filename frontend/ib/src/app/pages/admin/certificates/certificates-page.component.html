@@ -141,6 +141,18 @@
             <span class="details-value">{{ labelRevocationReason(selected.revocationReason) }}</span>
           </div>
         </div>
+
+        <div class="details-actions">
+          <div class="download-group">
+            <select class="ti-input download-format" (change)="downloadFormat.set($any($event.target).value)">
+              <option value="pem" [selected]="downloadFormat() === 'pem'">PEM</option>
+              <option value="cer" [selected]="downloadFormat() === 'cer'">CER (DER)</option>
+            </select>
+            <button class="ti-btn" type="button" (click)="downloadCertificate(selected.id, downloadFormat())">
+              Download
+            </button>
+          </div>
+        </div>
       </section>
     }
   </div>

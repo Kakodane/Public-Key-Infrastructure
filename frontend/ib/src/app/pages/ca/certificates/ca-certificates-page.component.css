@@ -164,6 +164,32 @@
   word-break: break-word;
 }
 
+.details-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.download-group {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+}
+
+.download-format {
+  width: auto;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+.download-group .ti-btn {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  padding: 8px 18px;
+  font-size: 13px;
+}
+
 @media (max-width: 880px) {
   .section__header {
     flex-direction: column;
