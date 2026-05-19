@@ -1,5 +1,6 @@
 package com.ib.domain.entity;
 
+import com.ib.domain.enums.ValidationTokenType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,17 @@ public class ValidationToken {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private ValidationTokenType type;
+
+    @Column(name = "challenge_plain", columnDefinition = "TEXT")
+    private String challengePlain;
+
+    @Column(name = "challenge_encrypted", columnDefinition = "TEXT")
+    private String challengeEncrypted;
+
 
     @Column(nullable = false)
     private LocalDateTime expiresAt;

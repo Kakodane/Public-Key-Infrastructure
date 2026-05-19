@@ -2,6 +2,7 @@ package com.ib.service;
 
 import com.ib.domain.entity.User;
 import com.ib.domain.entity.ValidationToken;
+import com.ib.domain.enums.ValidationTokenType;
 import com.ib.domain.repository.ValidationTokenRepository;
 import com.ib.exception.InvalidTokenException;
 import com.ib.exception.TokenExpiredException;
@@ -18,11 +19,14 @@ public class ValidationTokenService {
     private final ValidationTokenRepository validationTokenRepository;
 
     @Transactional
-    public ValidationToken createToken(User user) {
+    public ValidationToken createToken(User user, ValidationTokenType type, String challengePlain, String challengeEncrypted) {
         String token = UUID.randomUUID().toString();
         ValidationToken validationToken = ValidationToken.builder()
                 .token(token)
                 .user(user)
+                .type(type)
+                .challengePlain(challengePlain)
+                .challengeEncrypted(challengeEncrypted)
                 .expiresAt(LocalDateTime.now().plusHours(24))
                 .used(false)
                 .build();
@@ -40,5 +44,21 @@ public class ValidationTokenService {
         }
         foundToken.setUsed(true);
         return validationTokenRepository.save(foundToken);
+    }
+
+    @Transactional(readOnly = true)
+    public ValidationToken findActive(String token, ValidationTokenType expectedType) {
+        ValidationToken found = validationTokenRepository.findByToken(token)
+                .orElseThrow(() -> new InvalidTokenException("Token not found"));
+        if (found.getType() != expectedType) {
+            throw new InvalidTokenException("Token type mismatch");
+        }
+        if (found.isUsed()) {
+            throw new InvalidTokenException("Token already used");
+        }
+        if (found.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new TokenExpiredException("Token expired");
+        }
+        return found;
     }
 }

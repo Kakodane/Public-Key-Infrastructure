@@ -41,6 +41,8 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh").permitAll()
 						.requestMatchers("/h2-console", "/h2-console/**").permitAll()
 						.requestMatchers(HttpMethod.PUT, "/api/ca/password").permitAll()
+                        .requestMatchers("/api/registration/**").permitAll()
+                        .requestMatchers("/api/password-reset/**").permitAll()
 						.anyRequest().authenticated()
 				)
 				.exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
