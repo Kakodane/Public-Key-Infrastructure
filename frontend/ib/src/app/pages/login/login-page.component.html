@@ -9,69 +9,122 @@
   <div class="ti-card" style="width: min(520px, 100%); padding: 22px 22px 18px;">
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
       <div>
-
         <h1 style="margin: 10px 0 4px; font-size: 22px; letter-spacing: -0.02em;">
           Primary key infrastructure
         </h1>
         <p style="margin: 0; color: var(--text-2); font-size: 13px;">
-          Authenticate to issue and inspect certificates.
+          @if (step() === 'credentials') {
+            Authenticate to issue and inspect certificates.
+          } @else {
+            Enter the 6-digit code from your authenticator app.
+          }
         </p>
       </div>
     </div>
 
     <hr style="border: 0; border-top: 1px solid var(--border); margin: 16px 0;" />
 
-    <form (ngSubmit)="submit()" [formGroup]="form" style="display: grid; gap: 12px;">
-      <div style="display: grid; gap: 6px;">
-        <label style="color: var(--text-2); font-size: 12px;" for="login-email">Email</label>
-        <input
-          id="login-email"
-          class="ti-input ti-mono"
-          type="email"
-          autocomplete="username"
-          placeholder="user@ib.local"
-          formControlName="email"
-        />
-        @if (emailErrors) {
-          <span class="field-error">{{ emailErrors }}</span>
-        }
-      </div>
-
-      <div style="display: grid; gap: 6px;">
-        <label style="color: var(--text-2); font-size: 12px;" for="login-password">Password</label>
-        <input
-          id="login-password"
-          class="ti-input ti-mono"
-          type="password"
-          autocomplete="current-password"
-          placeholder="••••••••"
-          formControlName="password"
-        />
-        @if (passwordErrors) {
-          <span class="field-error">{{ passwordErrors }}</span>
-        }
-      </div>
-
-      @if (error()) {
-        <div
-          class="ti-card"
-          style="
-            padding: 10px 12px;
-            border-color: rgba(248, 81, 73, 0.35);
-            background: rgba(248, 81, 73, 0.06);
-          "
-          role="alert"
-        >
-          <div class="ti-mono" style="color: var(--critical); font-size: 12px;">
-            {{ error() }}
-          </div>
+    @if (step() === 'credentials') {
+      <form (ngSubmit)="submit()" [formGroup]="form" style="display: grid; gap: 12px;">
+        <div style="display: grid; gap: 6px;">
+          <label style="color: var(--text-2); font-size: 12px;" for="login-email">Email</label>
+          <input
+            id="login-email"
+            class="ti-input ti-mono"
+            type="email"
+            autocomplete="username"
+            placeholder="user@ib.local"
+            formControlName="email"
+          />
+          @if (emailErrors) {
+            <span class="field-error">{{ emailErrors }}</span>
+          }
         </div>
-      }
 
-      <button class="ti-btn" type="submit" [disabled]="busy()">
-        @if (busy()) { Authenticating… } @else { Sign in }
-      </button>
-    </form>
+        <div style="display: grid; gap: 6px;">
+          <label style="color: var(--text-2); font-size: 12px;" for="login-password">Password</label>
+          <input
+            id="login-password"
+            class="ti-input ti-mono"
+            type="password"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            formControlName="password"
+          />
+          @if (passwordErrors) {
+            <span class="field-error">{{ passwordErrors }}</span>
+          }
+        </div>
+
+        @if (error()) {
+          <div
+            class="ti-card"
+            style="
+              padding: 10px 12px;
+              border-color: rgba(248, 81, 73, 0.35);
+              background: rgba(248, 81, 73, 0.06);
+            "
+            role="alert"
+          >
+            <div class="ti-mono" style="color: var(--critical); font-size: 12px;">
+              {{ error() }}
+            </div>
+          </div>
+        }
+
+        <button class="ti-btn" type="submit" [disabled]="busy()">
+          @if (busy()) { Authenticating… } @else { Sign in }
+        </button>
+      </form>
+    } @else {
+      <form (ngSubmit)="submitTotp()" [formGroup]="totpForm" style="display: grid; gap: 12px;">
+        <div style="display: grid; gap: 6px;">
+          <label style="color: var(--text-2); font-size: 12px;" for="login-totp">Authentication code</label>
+          <input
+            id="login-totp"
+            class="ti-input ti-mono"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            placeholder="000000"
+            formControlName="code"
+          />
+          @if (totpErrors) {
+            <span class="field-error">{{ totpErrors }}</span>
+          }
+        </div>
+
+        @if (error()) {
+          <div
+            class="ti-card"
+            style="
+              padding: 10px 12px;
+              border-color: rgba(248, 81, 73, 0.35);
+              background: rgba(248, 81, 73, 0.06);
+            "
+            role="alert"
+          >
+            <div class="ti-mono" style="color: var(--critical); font-size: 12px;">
+              {{ error() }}
+            </div>
+          </div>
+        }
+
+        <button class="ti-btn" type="submit" [disabled]="busy()">
+          @if (busy()) { Verifying… } @else { Verify code }
+        </button>
+
+        <button
+          class="ti-btn"
+          type="button"
+          style="border-color: var(--border); background: transparent;"
+          [disabled]="busy()"
+          (click)="backToCredentials()"
+        >
+          Back to sign in
+        </button>
+      </form>
+    }
   </div>
 </div>
-

@@ -37,7 +37,8 @@ public class MeController {
 				user.email(),
 				role,
 				org != null ? org.getId() : null,
-				org != null ? org.getName() : null
+				org != null ? org.getName() : null,
+				dbUser.isTwoFactorEnabled()
 		);
 	}
 }

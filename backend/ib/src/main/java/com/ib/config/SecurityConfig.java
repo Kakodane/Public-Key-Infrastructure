@@ -38,7 +38,7 @@ public class SecurityConfig {
 				.headers(h -> h.frameOptions(frame -> frame.sameOrigin()))
 				.authorizeHttpRequests(auth -> auth
 						.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD, DispatcherType.ASYNC).permitAll()
-						.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/2fa/verify").permitAll()
 						.requestMatchers("/h2-console", "/h2-console/**").permitAll()
 						.requestMatchers(HttpMethod.PUT, "/api/ca/password").permitAll()
                         .requestMatchers("/api/registration/**").permitAll()

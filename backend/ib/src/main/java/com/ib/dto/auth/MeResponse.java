@@ -5,6 +5,7 @@ public record MeResponse(
 		String email,
 		String role,
 		Long organizationId,
-		String organizationName
+		String organizationName,
+		boolean twoFactorEnabled
 ) {
 }
