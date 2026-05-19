@@ -1,0 +1,67 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px 18px;
+}
+
+.card {
+  width: min(560px, 100%);
+  padding: 22px 22px 18px;
+}
+
+.card__title {
+  margin: 10px 0 4px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.card__subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.divider {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.success-box {
+  padding: 14px;
+  border-color: rgba(63, 185, 80, 0.35);
+  background: rgba(63, 185, 80, 0.06);
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field__label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.password-hint {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.error-box {
+  padding: 10px 12px;
+  border-color: rgba(248, 81, 73, 0.35);
+  background: rgba(248, 81, 73, 0.06);
+}
+
+.error-box__text {
+  color: var(--crit);
+  font-size: 12px;
+}
