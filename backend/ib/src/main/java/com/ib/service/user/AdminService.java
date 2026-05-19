@@ -5,6 +5,7 @@ import com.ib.domain.entity.Certificate;
 import com.ib.domain.entity.Organization;
 import com.ib.domain.entity.User;
 import com.ib.domain.entity.ValidationToken;
+import com.ib.domain.enums.ValidationTokenType;
 import com.ib.domain.repository.CertificateRepository;
 import com.ib.domain.repository.OrganizationRepository;
 import com.ib.dto.auth.GetCertificateResponse;
@@ -45,7 +46,7 @@ public class AdminService {
     @Transactional
     public CreateCAUserResponse createCAUser(CreateCAUserRequest request) {
         User user = caService.createUser(request);
-        ValidationToken token = validationTokenService.createToken(user);
+        ValidationToken token = validationTokenService.createToken(user, ValidationTokenType.CA_ACTIVATION,null,null);
         String activationUrl = frontendUrl + "/set-password?token=" + token.getToken();
         emailService.sendEmail(
                 "v.vitomirovic@gmail.com",
