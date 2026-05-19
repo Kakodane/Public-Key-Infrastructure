@@ -1,21 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import {
-  AbstractControl,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
-  ValidationErrors,
   Validators
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CaService } from '../../core/ca/ca.service';
-
-function passwordsMatch(group: AbstractControl): ValidationErrors | null {
-  const a = group.get('password')?.value;
-  const b = group.get('confirm')?.value;
-  return a && b && a !== b ? { mismatch: true } : null;
-}
-
+import { passwordsMatch } from '../../core/auth/passwords-match.validator';
 @Component({
   selector: 'app-set-password-page',
   standalone: true,
@@ -51,7 +43,7 @@ export class SetPasswordPageComponent implements OnInit {
         validators: [Validators.required]
       })
     },
-    { validators: passwordsMatch }
+    { validators: passwordsMatch('password', 'confirm') }
   );
 
   ngOnInit() {

@@ -18,6 +18,34 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'register',
+    loadComponent: () =>
+      import('./pages/register/register-page.component').then(
+        (m) => m.RegisterPageComponent
+      )
+  },
+  {
+    path: 'activate',
+    loadComponent: () =>
+      import('./pages/activate/activate-page.component').then(
+        (m) => m.ActivatePageComponent
+      )
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./pages/forgot-password/forgot-password-page.component').then(
+        (m) => m.ForgotPasswordPageComponent
+      )
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./pages/reset-password/reset-password-page.component').then(
+        (m) => m.ResetPasswordPageComponent
+      )
+  },
+  {
     path: 'me',
     loadComponent: () =>
       import('./pages/me/me-page.component').then((m) => m.MePageComponent),

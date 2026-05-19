@@ -71,6 +71,11 @@
       <button class="ti-btn" type="submit" [disabled]="busy()">
         @if (busy()) { Authenticating… } @else { Sign in }
       </button>
+      <div style="text-align: center; font-size: 12px; color: var(--muted); margin-top: 4px;">
+        <a routerLink="/forgot-password">Forgot password?</a>
+        &nbsp;·&nbsp;
+        <a routerLink="/register">Create an account</a>
+      </div>
     </form>
   </div>
 </div>
