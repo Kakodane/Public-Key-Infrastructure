@@ -1,5 +1,6 @@
 package com.ib.controller;
 
+import com.ib.crypto.TotpSecretCipher;
 import com.ib.domain.entity.User;
 import com.ib.domain.repository.UserRepository;
 import com.ib.dto.auth.LoginRequest;
@@ -40,6 +41,7 @@ public class AuthController {
 	private final RefreshTokenService refreshTokenService;
 	private final TokenService tokenService;
 	private final TotpService totpService;
+	private final TotpSecretCipher totpSecretCipher;
 	private final UserRepository userRepository;
 
 	public AuthController(
@@ -47,12 +49,14 @@ public class AuthController {
 			RefreshTokenService refreshTokenService,
 			TokenService tokenService,
 			TotpService totpService,
+			TotpSecretCipher totpSecretCipher,
 			UserRepository userRepository
 	) {
 		this.authService = authService;
 		this.refreshTokenService = refreshTokenService;
 		this.tokenService = tokenService;
 		this.totpService = totpService;
+		this.totpSecretCipher = totpSecretCipher;
 		this.userRepository = userRepository;
 	}
 
@@ -89,10 +93,11 @@ public class AuthController {
 			Long userId = tokenService.parseTwoFactorChallengeToken(request.twoFactorToken());
 			User user = userRepository.findById(userId)
 					.orElseThrow(() -> new BadCredentialsException("Invalid token"));
-			if (!user.isTwoFactorEnabled() || user.getTotpSecret() == null) {
+			String secret = totpSecretCipher.decrypt(user);
+			if (!user.isTwoFactorEnabled() || secret == null) {
 				throw new BadCredentialsException("Invalid token");
 			}
-			if (!totpService.verifyCode(user.getTotpSecret(), request.code())) {
+			if (!totpService.verifyCode(secret, request.code())) {
 				throw new BadCredentialsException("Invalid code");
 			}
 			authService.requireEnabledUser(user.getId());

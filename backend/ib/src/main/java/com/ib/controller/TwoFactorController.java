@@ -1,5 +1,6 @@
 package com.ib.controller;
 
+import com.ib.crypto.TotpSecretCipher;
 import com.ib.domain.entity.User;
 import com.ib.domain.repository.UserRepository;
 import com.ib.dto.auth.TwoFactorCodeRequest;
@@ -29,6 +30,7 @@ public class TwoFactorController {
 
 	private final UserRepository userRepository;
 	private final TotpService totpService;
+	private final TotpSecretCipher totpSecretCipher;
 
 	@PostMapping("/setup")
 	@PreAuthorize("hasRole('REGULAR_USER')")
@@ -39,7 +41,7 @@ public class TwoFactorController {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Two-factor authentication is already enabled");
 		}
 		String secret = totpService.generateSecret();
-		user.setTotpSecret(secret);
+		totpSecretCipher.encryptAndStore(user, secret);
 		userRepository.save(user);
 		String qrCodeUri = totpService.generateQrCodeUri(secret, user.getEmail());
 		return new TwoFactorSetupResponse(secret, qrCodeUri);
@@ -57,10 +59,11 @@ public class TwoFactorController {
 		if (user.isTwoFactorEnabled()) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Two-factor authentication is already enabled");
 		}
-		if (user.getTotpSecret() == null) {
+		String secret = totpSecretCipher.decrypt(user);
+		if (secret == null) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Two-factor setup has not been started");
 		}
-		if (!totpService.verifyCode(user.getTotpSecret(), request.code())) {
+		if (!totpService.verifyCode(secret, request.code())) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid verification code");
 		}
 		user.setTwoFactorEnabled(true);
@@ -79,14 +82,15 @@ public class TwoFactorController {
 		if (!user.isTwoFactorEnabled()) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Two-factor authentication is not enabled");
 		}
-		if (user.getTotpSecret() == null) {
+		String secret = totpSecretCipher.decrypt(user);
+		if (secret == null) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Two-factor authentication is misconfigured");
 		}
-		if (!totpService.verifyCode(user.getTotpSecret(), request.code())) {
+		if (!totpService.verifyCode(secret, request.code())) {
 			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid verification code");
 		}
 		user.setTwoFactorEnabled(false);
-		user.setTotpSecret(null);
+		totpSecretCipher.clear(user);
 		userRepository.save(user);
 	}
 
