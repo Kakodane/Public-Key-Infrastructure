@@ -12,6 +12,7 @@ import com.ib.domain.repository.CertificateRepository;
 import com.ib.domain.repository.OrganizationRepository;
 import com.ib.domain.repository.UserRepository;
 import com.ib.dto.auth.GetCertificateResponse;
+import com.ib.dto.certificate.CertificateDownload;
 import com.ib.dto.certificate.CertificateExtensionsRequest;
 import com.ib.dto.certificate.CertificateKeyUsage;
 import com.ib.dto.certificate.CreateEndEntityCertificateRequest;
@@ -26,6 +27,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 
 
 @Service
@@ -154,6 +160,57 @@ public class CertificateService {
 
 		Certificate saved = certificateRepository.save(certificate);
 		return new GetCertificateResponse(saved);
+	}
+
+	@Transactional(readOnly = true)
+	public CertificateDownload downloadCertificate(Long id, String format) {
+		User caller = requireCallerUser();
+		Certificate certificate = certificateRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("Certificate not found: " + id));
+
+		authorizeDownload(caller, certificate);
+
+		String pem = certificate.getCertificatePem();
+		String serialNumber = certificate.getSerialNumber();
+
+		if ("cer".equalsIgnoreCase(format)) {
+			byte[] derBytes = convertPemToDer(pem);
+			return new CertificateDownload(derBytes, "application/x-x509-ca-cert", serialNumber + ".cer");
+		}
+
+		byte[] pemBytes = pem.getBytes(StandardCharsets.UTF_8);
+		return new CertificateDownload(pemBytes, "application/x-pem-file", serialNumber + ".pem");
+	}
+
+	private void authorizeDownload(User caller, Certificate certificate) {
+		if (caller.getRole() == Role.ADMIN) {
+			return;
+		}
+		if (caller.getRole() == Role.CA_USER) {
+			Long callerOrgId = requireCallerOrganizationId(caller);
+			if (certificate.getOrganization() == null || !callerOrgId.equals(certificate.getOrganization().getId())) {
+				throw new AccessDeniedException("CA_USER may only download certificates from their own organization");
+			}
+			return;
+		}
+		if (caller.getRole() == Role.REGULAR_USER) {
+			if (certificate.getOwner() == null || !caller.getId().equals(certificate.getOwner().getId())) {
+				throw new AccessDeniedException("REGULAR_USER may only download their own certificates");
+			}
+			return;
+		}
+		throw new AccessDeniedException("Caller role is not permitted to download certificates");
+	}
+
+	private static byte[] convertPemToDer(String pem) {
+		try {
+			CertificateFactory cf = CertificateFactory.getInstance("X.509", "BC");
+			X509Certificate cert = (X509Certificate) cf.generateCertificate(
+					new ByteArrayInputStream(pem.getBytes(StandardCharsets.UTF_8)));
+			return cert.getEncoded();
+		} catch (Exception e) {
+			throw new IllegalStateException("Failed to convert certificate PEM to DER", e);
+		}
 	}
 
 	private User requireCallerUser() {

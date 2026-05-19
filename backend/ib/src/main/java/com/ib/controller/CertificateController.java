@@ -1,16 +1,22 @@
 package com.ib.controller;
 
 import com.ib.dto.auth.GetCertificateResponse;
+import com.ib.dto.certificate.CertificateDownload;
 import com.ib.dto.certificate.CreateEndEntityCertificateRequest;
 import com.ib.dto.certificate.CreateIntermediateCertificateRequest;
 import com.ib.dto.certificate.CreateRootCertificateRequest;
 import com.ib.service.certificate.CertificateService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -46,5 +52,18 @@ public class CertificateController {
 			@Valid @RequestBody CreateEndEntityCertificateRequest request
 	) {
 		return ResponseEntity.ok(certificateService.issueEndEntity(request));
+	}
+
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@GetMapping("/{id}/download")
+	public ResponseEntity<byte[]> downloadCertificate(
+			@PathVariable Long id,
+			@RequestParam String format
+	) {
+		CertificateDownload download = certificateService.downloadCertificate(id, format);
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + download.filename() + "\"")
+				.contentType(MediaType.parseMediaType(download.contentType()))
+				.body(download.data());
 	}
 }

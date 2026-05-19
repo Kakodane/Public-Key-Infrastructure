@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CaService } from '../../../core/ca/ca.service';
+import { CertificateDownloadService } from '../../../core/certificate/certificate-download.service';
 import { GetCertificateResponse } from '../../../core/admin/admin.types';
 import { CertificateStatus, RevocationReason } from '../../../core/certificate/certificate.types';
 
@@ -14,11 +15,13 @@ import { CertificateStatus, RevocationReason } from '../../../core/certificate/c
 })
 export class CaCertificatesPageComponent implements OnInit {
   private readonly ca = inject(CaService);
+  private readonly certDownload = inject(CertificateDownloadService);
 
   readonly certificates = signal<GetCertificateResponse[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly selectedCertificate = signal<GetCertificateResponse | null>(null);
+  readonly downloadFormat = signal<'pem' | 'cer'>('pem');
 
   readonly hasCertificates = computed(() => this.certificates().length > 0);
 
@@ -69,6 +72,10 @@ export class CaCertificatesPageComponent implements OnInit {
   labelRevocationReason(value: RevocationReason | null) {
     if (value == null) return '—';
     return RevocationReason[value].replaceAll('_', ' ');
+  }
+
+  downloadCertificate(id: number, format: 'pem' | 'cer') {
+    this.certDownload.download(id, format);
   }
 }
 

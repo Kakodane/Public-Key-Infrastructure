@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { CertificateDownloadService } from '../../../core/certificate/certificate-download.service';
 import { RegularService } from '../../../core/regular/regular.service';
 import { RegularCertificateResponse } from '../../../core/regular/regular.types';
 
@@ -11,9 +12,12 @@ import { RegularCertificateResponse } from '../../../core/regular/regular.types'
   styleUrl: './regular-certificates-page.component.css'
 })
 export class RegularCertificatesPageComponent implements OnInit {
+  private readonly certDownload = inject(CertificateDownloadService);
+
   readonly certificates = signal<RegularCertificateResponse[]>([]);
   readonly isLoading = signal(false);
   readonly selectedCertificate = signal<RegularCertificateResponse | null>(null);
+  readonly downloadFormat = signal<'pem' | 'cer'>('pem');
 
   constructor(private readonly regularService: RegularService) {}
 
@@ -54,5 +58,9 @@ export class RegularCertificatesPageComponent implements OnInit {
 
   labelType(value: string): string {
     return value.replaceAll('_', ' ');
+  }
+
+  downloadCertificate(id: number, format: 'pem' | 'cer') {
+    this.certDownload.download(id, format);
   }
 }

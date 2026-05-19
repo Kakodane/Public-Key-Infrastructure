@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { AdminService } from '../../../core/admin/admin.service';
+import { CertificateDownloadService } from '../../../core/certificate/certificate-download.service';
 import {CertificateStatus, CertificateType, RevocationReason} from '../../../core/certificate/certificate.types';
 import { GetCertificateResponse } from '../../../core/admin/admin.types';
 
@@ -13,11 +14,13 @@ import { GetCertificateResponse } from '../../../core/admin/admin.types';
 })
 export class CertificatesPageComponent implements OnInit {
   private readonly admin = inject(AdminService);
+  private readonly certDownload = inject(CertificateDownloadService);
 
   readonly certificates = signal<GetCertificateResponse[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly selectedCertificate = signal<GetCertificateResponse | null>(null);
+  readonly downloadFormat = signal<'pem' | 'cer'>('pem');
 
   readonly hasCertificates = computed(() => this.certificates().length > 0);
 
@@ -72,6 +75,10 @@ export class CertificatesPageComponent implements OnInit {
   labelRevocationReason(value: RevocationReason | null) {
     if (value == null) return '—';
     return RevocationReason[value].replaceAll('_', ' ');
+  }
+
+  downloadCertificate(id: number, format: 'pem' | 'cer') {
+    this.certDownload.download(id, format);
   }
 }
 
