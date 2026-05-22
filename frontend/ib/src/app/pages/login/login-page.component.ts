@@ -68,6 +68,7 @@ export class LoginPageComponent {
     this.auth.login(email, password).subscribe({
       next: (result) => {
         if (result.twoFactorRequired) {
+          this.auth.clearLocalSession();
           this.twoFactorToken.set(result.twoFactorToken);
           this.step.set('totp');
           this.totpForm.reset();

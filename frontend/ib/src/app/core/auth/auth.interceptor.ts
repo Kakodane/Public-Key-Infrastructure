@@ -1,56 +1,98 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { catchError, finalize, map, Observable, shareReplay, switchMap, throwError } from 'rxjs';
+import { HttpErrorResponse, HttpClient, HttpInterceptorFn } from '@angular/common/http';
+import { inject, Injector } from '@angular/core';
+import { Router } from '@angular/router';
+import {
+  catchError,
+  finalize,
+  map,
+  Observable,
+  shareReplay,
+  switchMap,
+  throwError
+} from 'rxjs';
+import { AuthService } from './auth.service';
 import { TokenStorageService } from './token-storage.service';
-import { HttpClient } from '@angular/common/http';
 import { TokenResponse } from './auth.types';
 
 let refreshInFlight$: Observable<void> | null = null;
 
-function refreshAccessToken(http: HttpClient, tokenStorage: TokenStorageService) {
-  refreshInFlight$ ??= http
-    .post<TokenResponse>('/api/auth/refresh', {})
-    .pipe(
-      map((r) => {
-        tokenStorage.write({
-          accessToken: r.accessToken,
-          accessExpiresInSeconds: r.expiresIn
-        });
-      }),
-      shareReplay({ bufferSize: 1, refCount: false }),
-      finalize(() => {
-        refreshInFlight$ = null;
-      })
-    );
+/** Endpoints that must not send a stored access token. */
+function skipAccessTokenHeader(url: string): boolean {
+  return (
+    url.startsWith('/api/auth/login') ||
+    url.startsWith('/api/auth/refresh') ||
+    url.startsWith('/api/auth/2fa/verify')
+  );
+}
+
+function endClientSession(injector: Injector): void {
+  injector.get(TokenStorageService).clear();
+  try {
+    injector.get(AuthService).clearLocalSession();
+  } catch {
+    // AuthService may not be available during early bootstrap
+  }
+  void injector.get(Router).navigateByUrl('/login');
+}
+
+function refreshAccessToken(
+  http: HttpClient,
+  tokenStorage: TokenStorageService,
+  injector: Injector
+) {
+  refreshInFlight$ ??= http.post<TokenResponse>('/api/auth/refresh', {}).pipe(
+    map((r) => {
+      tokenStorage.write({
+        accessToken: r.accessToken,
+        accessExpiresInSeconds: r.expiresIn
+      });
+    }),
+    catchError((err) => {
+      endClientSession(injector);
+      return throwError(() => err);
+    }),
+    shareReplay({ bufferSize: 1, refCount: false }),
+    finalize(() => {
+      refreshInFlight$ = null;
+    })
+  );
   return refreshInFlight$;
 }
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const injector = inject(Injector);
   const tokenStorage = inject(TokenStorageService);
   const http = inject(HttpClient);
 
   const tokens = tokenStorage.read();
-  const isAuthEndpoint = req.url.startsWith('/api/auth/login') || req.url.startsWith('/api/auth/refresh');
+  const attachToken = tokens?.accessToken && !skipAccessTokenHeader(req.url);
 
-  const reqWithAuth =
-    tokens?.accessToken && !isAuthEndpoint
-      ? req.clone({ setHeaders: { Authorization: `Bearer ${tokens.accessToken}` } })
-      : req;
+  const reqWithAuth = attachToken
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${tokens.accessToken}` } })
+    : req;
 
   return next(reqWithAuth).pipe(
     catchError((err) => {
       if (!(err instanceof HttpErrorResponse)) return throwError(() => err);
       if (err.status !== 401) return throwError(() => err);
-      if (isAuthEndpoint) return throwError(() => err);
+      if (skipAccessTokenHeader(req.url)) return throwError(() => err);
 
-      return refreshAccessToken(http, tokenStorage).pipe(
+      return refreshAccessToken(http, tokenStorage, injector).pipe(
         switchMap(() => {
           const nextTokens = tokenStorage.read();
-          if (!nextTokens?.accessToken) return throwError(() => err);
-          return next(req.clone({ setHeaders: { Authorization: `Bearer ${nextTokens.accessToken}` } }));
+          if (!nextTokens?.accessToken) {
+            endClientSession(injector);
+            return throwError(() => err);
+          }
+          return next(
+            req.clone({ setHeaders: { Authorization: `Bearer ${nextTokens.accessToken}` } })
+          );
+        }),
+        catchError((refreshErr) => {
+          endClientSession(injector);
+          return throwError(() => refreshErr);
         })
       );
     })
   );
 };
-
