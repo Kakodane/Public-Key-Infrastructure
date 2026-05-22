@@ -14,6 +14,7 @@ import com.ib.domain.repository.UserRepository;
 import com.ib.dto.auth.GetCertificateResponse;
 import com.ib.dto.certificate.CertificateDownload;
 import com.ib.dto.certificate.CertificateExtensionsRequest;
+import com.ib.dto.certificate.DownloadCertificateRequest;
 import com.ib.dto.certificate.CertificateKeyUsage;
 import com.ib.dto.certificate.CreateEndEntityCertificateRequest;
 import com.ib.dto.certificate.CreateIntermediateCertificateRequest;
@@ -41,6 +42,7 @@ public class CertificateService {
 	private final CertificateGenerationService generationService;
 	private final CertificateIssuerValidator issuerValidator;
 	private final CertificatePrivateKeyCipher privateKeyCipher;
+	private final CertificateKeystoreExportService keystoreExportService;
 	private final OrganizationRepository organizationRepository;
 	private final CertificateRepository certificateRepository;
 	private final UserRepository userRepository;
@@ -169,17 +171,52 @@ public class CertificateService {
 				.orElseThrow(() -> new EntityNotFoundException("Certificate not found: " + id));
 
 		authorizeDownload(caller, certificate);
+		return buildPublicCertificateDownload(certificate, validatePublicDownloadFormat(format));
+	}
 
+	@Transactional(readOnly = true)
+	public CertificateDownload downloadCertificate(Long id, DownloadCertificateRequest request) {
+		User caller = requireCallerUser();
+		Certificate certificate = certificateRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("Certificate not found: " + id));
+
+		authorizeDownload(caller, certificate);
+
+		String format = request.format().trim().toLowerCase();
+		if ("pkcs12".equals(format)) {
+			char[] password = request.keystorePassword().toCharArray();
+			byte[] p12 = keystoreExportService.exportPkcs12(certificate, password);
+			return new CertificateDownload(
+					p12,
+					"application/x-pkcs12",
+					certificate.getSerialNumber() + ".p12");
+		}
+
+		return buildPublicCertificateDownload(certificate, validatePublicDownloadFormat(format));
+	}
+
+	private static CertificateDownload buildPublicCertificateDownload(Certificate certificate, String format) {
 		String pem = certificate.getCertificatePem();
 		String serialNumber = certificate.getSerialNumber();
 
-		if ("cer".equalsIgnoreCase(format)) {
+		if ("cer".equals(format)) {
 			byte[] derBytes = convertPemToDer(pem);
 			return new CertificateDownload(derBytes, "application/x-x509-ca-cert", serialNumber + ".cer");
 		}
 
 		byte[] pemBytes = pem.getBytes(StandardCharsets.UTF_8);
 		return new CertificateDownload(pemBytes, "application/x-pem-file", serialNumber + ".pem");
+	}
+
+	private static String validatePublicDownloadFormat(String format) {
+		if (format == null || format.isBlank()) {
+			throw new IllegalArgumentException("format is required");
+		}
+		String normalized = format.trim().toLowerCase();
+		if (!"pem".equals(normalized) && !"cer".equals(normalized)) {
+			throw new IllegalArgumentException("format must be pem or cer");
+		}
+		return normalized;
 	}
 
 	private void authorizeDownload(User caller, Certificate certificate) {
