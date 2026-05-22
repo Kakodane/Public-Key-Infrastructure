@@ -3,6 +3,7 @@ package com.ib.controller;
 import com.ib.dto.auth.GetCertificateResponse;
 import com.ib.dto.certificate.CertificateDownload;
 import com.ib.dto.certificate.CreateEndEntityCertificateRequest;
+import com.ib.dto.certificate.DownloadCertificateRequest;
 import com.ib.dto.certificate.CreateIntermediateCertificateRequest;
 import com.ib.dto.certificate.CreateRootCertificateRequest;
 import com.ib.service.certificate.CertificateService;
@@ -60,7 +61,19 @@ public class CertificateController {
 			@PathVariable Long id,
 			@RequestParam String format
 	) {
-		CertificateDownload download = certificateService.downloadCertificate(id, format);
+		return toDownloadResponse(certificateService.downloadCertificate(id, format));
+	}
+
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@PostMapping("/{id}/download")
+	public ResponseEntity<byte[]> downloadCertificateWithBody(
+			@PathVariable Long id,
+			@Valid @RequestBody DownloadCertificateRequest request
+	) {
+		return toDownloadResponse(certificateService.downloadCertificate(id, request));
+	}
+
+	private static ResponseEntity<byte[]> toDownloadResponse(CertificateDownload download) {
 		return ResponseEntity.ok()
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + download.filename() + "\"")
 				.contentType(MediaType.parseMediaType(download.contentType()))

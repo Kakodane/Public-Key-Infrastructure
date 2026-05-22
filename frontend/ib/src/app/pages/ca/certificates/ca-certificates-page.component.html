@@ -142,12 +142,29 @@
         </div>
 
         <div class="details-actions">
+          @if (downloadError()) {
+            <div class="ti-err ti-mono download-feedback">{{ downloadError() }}</div>
+          }
           <div class="download-group">
-            <select class="ti-input download-format" (change)="downloadFormat.set($any($event.target).value)">
+            <select
+              class="ti-input download-format"
+              (change)="onDownloadFormatChange($any($event.target).value)"
+            >
               <option value="pem" [selected]="downloadFormat() === 'pem'">PEM</option>
               <option value="cer" [selected]="downloadFormat() === 'cer'">CER (DER)</option>
+              <option value="pkcs12" [selected]="downloadFormat() === 'pkcs12'">PKCS#12 (.p12)</option>
             </select>
-            <button class="ti-btn" type="button" (click)="downloadCertificate(selected.id, downloadFormat())">
+            @if (downloadFormat() === 'pkcs12') {
+              <input
+                type="password"
+                class="ti-input download-password"
+                placeholder="Keystore password (min 8)"
+                autocomplete="new-password"
+                [value]="keystorePassword()"
+                (input)="keystorePassword.set($any($event.target).value); downloadError.set(null)"
+              />
+            }
+            <button class="ti-btn" type="button" (click)="downloadCertificate(selected.id)">
               Download
             </button>
           </div>

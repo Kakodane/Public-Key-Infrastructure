@@ -2,7 +2,10 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CaService } from '../../../core/ca/ca.service';
-import { CertificateDownloadService } from '../../../core/certificate/certificate-download.service';
+import {
+  CertificateDownloadFormat,
+  CertificateDownloadService
+} from '../../../core/certificate/certificate-download.service';
 import { GetCertificateResponse } from '../../../core/admin/admin.types';
 import { CertificateStatus, RevocationReason } from '../../../core/certificate/certificate.types';
 
@@ -21,7 +24,9 @@ export class CaCertificatesPageComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly selectedCertificate = signal<GetCertificateResponse | null>(null);
-  readonly downloadFormat = signal<'pem' | 'cer'>('pem');
+  readonly downloadFormat = signal<CertificateDownloadFormat>('pem');
+  readonly keystorePassword = signal('');
+  readonly downloadError = signal<string | null>(null);
 
   readonly hasCertificates = computed(() => this.certificates().length > 0);
 
@@ -57,6 +62,16 @@ export class CaCertificatesPageComponent implements OnInit {
 
   clearDetails() {
     this.selectedCertificate.set(null);
+    this.downloadError.set(null);
+    this.keystorePassword.set('');
+  }
+
+  onDownloadFormatChange(format: CertificateDownloadFormat) {
+    this.downloadFormat.set(format);
+    this.downloadError.set(null);
+    if (format !== 'pkcs12') {
+      this.keystorePassword.set('');
+    }
   }
 
   formatDate(value: string | null | undefined) {
@@ -74,8 +89,25 @@ export class CaCertificatesPageComponent implements OnInit {
     return RevocationReason[value].replaceAll('_', ' ');
   }
 
-  downloadCertificate(id: number, format: 'pem' | 'cer') {
-    this.certDownload.download(id, format);
+  downloadCertificate(id: number) {
+    const format = this.downloadFormat();
+    this.downloadError.set(null);
+
+    if (format === 'pkcs12') {
+      const password = this.keystorePassword().trim();
+      if (!password) {
+        this.downloadError.set('Keystore password is required');
+        return;
+      }
+      if (password.length < 8) {
+        this.downloadError.set('Keystore password must be at least 8 characters');
+        return;
+      }
+      this.certDownload.download(id, format, password, (message) => this.downloadError.set(message));
+      return;
+    }
+
+    this.certDownload.download(id, format, undefined, (message) => this.downloadError.set(message));
   }
 }
 

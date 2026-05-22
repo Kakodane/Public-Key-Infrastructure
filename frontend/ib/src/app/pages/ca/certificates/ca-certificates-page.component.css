@@ -166,7 +166,15 @@
 
 .details-actions {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.download-feedback {
+  font-size: 12px;
+  max-width: 100%;
+  text-align: right;
 }
 
 .download-group {
@@ -183,11 +191,23 @@
   padding: 8px 12px;
 }
 
+.download-password {
+  width: min(240px, 42vw);
+  border-radius: 0;
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
 .download-group .ti-btn {
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   padding: 8px 18px;
   font-size: 13px;
+}
+
+.download-group:has(.download-password) .download-format {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 @media (max-width: 880px) {
