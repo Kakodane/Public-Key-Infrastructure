@@ -110,13 +110,16 @@ export class AuthService {
     );
   }
 
+  /** Clears client session without calling the server (e.g. after failed token refresh). */
+  clearLocalSession(): void {
+    this.tokenStorage.clear();
+    this.state.set({ status: 'anonymous' });
+  }
+
   logout() {
     return this.http.post<void>('/api/auth/logout', {}).pipe(
       catchError(() => of(void 0)),
-      tap(() => {
-        this.tokenStorage.clear();
-        this.state.set({ status: 'anonymous' });
-      })
+      tap(() => this.clearLocalSession())
     );
   }
 }
