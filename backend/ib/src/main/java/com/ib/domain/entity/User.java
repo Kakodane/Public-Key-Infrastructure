@@ -72,6 +72,9 @@ public class User {
 	@Column(name = "totp_secret_nonce")
 	private byte[] totpSecretNonce;
 
+	@Column(name = "totp_master_key_version")
+	private Integer totpMasterKeyVersion;
+
 	@Column(name = "first_name")
 	private String firstName;
 
