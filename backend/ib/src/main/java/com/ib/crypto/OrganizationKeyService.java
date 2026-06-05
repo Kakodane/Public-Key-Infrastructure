@@ -51,7 +51,7 @@ public class OrganizationKeyService {
 		byte[] rawKey = cryptoService.decrypt(
 				organization.getEncryptedOrgKey(),
 				organization.getOrgKeyNonce(),
-				masterKeyProvider.masterKey());
+				masterKeyProvider.getCurrentKey());
 		try {
 			return new SecretKeySpec(rawKey, AES_ALGORITHM);
 		} finally {
@@ -63,7 +63,7 @@ public class OrganizationKeyService {
 		byte[] rawKey = generateAesKeyBytes();
 		try {
 			AesGcmCryptoService.AesGcmResult wrapped = cryptoService.encrypt(
-					rawKey, masterKeyProvider.masterKey());
+					rawKey, masterKeyProvider.getCurrentKey());
 			organization.setEncryptedOrgKey(wrapped.ciphertext());
 			organization.setOrgKeyNonce(wrapped.nonce());
 			organization.setOrgKeyVersion(CURRENT_KEY_VERSION);

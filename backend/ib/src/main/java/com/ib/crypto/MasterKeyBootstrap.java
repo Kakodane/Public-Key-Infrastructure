@@ -13,12 +13,9 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 
-/**
- * Seeds master key version 1 from {@code crypto.master-key-base64} when the DB has no keys,
- * then backfills version columns on rows encrypted before versioning was introduced.
- */
+
 @Component
-@Order(1)
+@Order(0)
 public class MasterKeyBootstrap implements CommandLineRunner {
 
 	private static final int MASTER_KEY_BYTES = 32;

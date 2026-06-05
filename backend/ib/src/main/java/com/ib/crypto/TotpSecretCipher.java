@@ -18,7 +18,7 @@ public class TotpSecretCipher {
 
 	public void encryptAndStore(User user, String plaintextSecret) {
 		byte[] plainBytes = plaintextSecret.getBytes(StandardCharsets.UTF_8);
-		AesGcmCryptoService.AesGcmResult result = cryptoService.encrypt(plainBytes, masterKeyProvider.masterKey());
+		AesGcmCryptoService.AesGcmResult result = cryptoService.encrypt(plainBytes, masterKeyProvider.getCurrentKey());
 		user.setEncryptedTotpSecret(result.ciphertext());
 		user.setTotpSecretNonce(result.nonce());
 	}
@@ -30,7 +30,7 @@ public class TotpSecretCipher {
 		byte[] plainBytes = cryptoService.decrypt(
 				user.getEncryptedTotpSecret(),
 				user.getTotpSecretNonce(),
-				masterKeyProvider.masterKey()
+				masterKeyProvider.getCurrentKey()
 		);
 		return new String(plainBytes, StandardCharsets.UTF_8);
 	}
