@@ -39,7 +39,7 @@ public class TotpSecretCipher {
 		return new String(plainBytes, StandardCharsets.UTF_8);
 	}
 
-	void rewrapTotpSecret(User user, int fromVersion, int toVersion) {
+	public void rewrapTotpSecret(User user, int fromVersion, int toVersion) {
 		if (user.getEncryptedTotpSecret() == null || user.getTotpSecretNonce() == null) {
 			throw new IllegalArgumentException("User has no encrypted TOTP secret.");
 		}

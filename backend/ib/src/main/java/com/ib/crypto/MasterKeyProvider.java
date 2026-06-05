@@ -35,6 +35,10 @@ public class MasterKeyProvider {
 		return keyCache.computeIfAbsent(version, this::loadKey);
 	}
 
+	public void evictAll() {
+		keyCache.clear();
+	}
+
 	private SecretKey loadKey(int version) {
 		MasterKey masterKey = masterKeyRepository.findByVersion(version)
 				.orElseThrow(() -> new IllegalStateException(

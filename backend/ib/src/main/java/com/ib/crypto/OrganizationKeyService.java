@@ -76,7 +76,7 @@ public class OrganizationKeyService {
 		}
 	}
 
-	void rewrapOrgKey(Organization organization, int fromVersion, int toVersion) {
+	public void rewrapOrgKey(Organization organization, int fromVersion, int toVersion) {
 		if (!hasWrappedKey(organization)) {
 			throw new IllegalArgumentException("Organization has no wrapped org key.");
 		}

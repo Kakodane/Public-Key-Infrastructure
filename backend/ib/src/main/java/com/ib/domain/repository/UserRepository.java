@@ -2,6 +2,7 @@ package com.ib.domain.repository;
 
 import com.ib.domain.entity.User;
 import com.ib.domain.enums.Role;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -27,4 +28,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
 			WHERE u.encryptedTotpSecret IS NOT NULL AND u.totpMasterKeyVersion IS NULL
 			""")
 	int backfillTotpMasterKeyVersionWhereMissing(@Param("version") int version);
+
+	@Query("""
+			SELECT COUNT(u) FROM User u
+			WHERE u.encryptedTotpSecret IS NOT NULL
+			AND (u.totpMasterKeyVersion IS NULL OR u.totpMasterKeyVersion < :targetVersion)
+			""")
+	long countNeedingTotpMasterKeyRotation(@Param("targetVersion") int targetVersion);
+
+	@Query("""
+			SELECT u FROM User u
+			WHERE u.encryptedTotpSecret IS NOT NULL
+			AND (u.totpMasterKeyVersion IS NULL OR u.totpMasterKeyVersion < :targetVersion)
+			""")
+	List<User> findNeedingTotpMasterKeyRotation(
+			@Param("targetVersion") int targetVersion, Pageable pageable);
 }
