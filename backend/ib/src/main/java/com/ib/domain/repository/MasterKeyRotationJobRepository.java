@@ -11,4 +11,6 @@ public interface MasterKeyRotationJobRepository extends JpaRepository<MasterKeyR
 	Optional<MasterKeyRotationJob> findFirstByStatusOrderByStartedAtDesc(MasterKeyRotationJobStatus status);
 
 	Optional<MasterKeyRotationJob> findFirstByStatus(MasterKeyRotationJobStatus status);
+
+	Optional<MasterKeyRotationJob> findFirstByOrderByStartedAtDesc();
 }

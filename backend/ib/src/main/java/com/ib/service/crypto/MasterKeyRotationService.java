@@ -9,6 +9,8 @@ import com.ib.domain.entity.MasterKeyRotationJob;
 import com.ib.domain.entity.Organization;
 import com.ib.domain.entity.User;
 import com.ib.domain.enums.MasterKeyRotationJobStatus;
+import com.ib.dto.crypto.MasterKeyRotationResponse;
+import com.ib.dto.crypto.MasterKeyStatusResponse;
 import com.ib.domain.repository.MasterKeyRepository;
 import com.ib.domain.repository.MasterKeyRotationJobRepository;
 import com.ib.domain.repository.OrganizationRepository;
@@ -77,6 +79,33 @@ public class MasterKeyRotationService {
 	public MasterKeyRotationJob findRunningJob() {
 		return rotationJobRepository.findFirstByStatus(MasterKeyRotationJobStatus.RUNNING)
 				.orElse(null);
+	}
+
+	@Transactional(readOnly = true)
+	public MasterKeyStatusResponse getStatus() {
+		MasterKey activeKey = masterKeyRepository.findByActiveTrue()
+				.orElseThrow(() -> new IllegalStateException("No active master key configured."));
+
+		Instant lastRotationAt = rotationJobRepository
+				.findFirstByStatusOrderByStartedAtDesc(MasterKeyRotationJobStatus.COMPLETED)
+				.map(MasterKeyRotationJob::getCompletedAt)
+				.orElse(null);
+
+		MasterKeyRotationJobStatus jobStatus = rotationJobRepository.findFirstByOrderByStartedAtDesc()
+				.map(MasterKeyRotationJob::getStatus)
+				.orElse(null);
+
+		return new MasterKeyStatusResponse(
+				activeKey.getVersion(),
+				activeKey.getCreatedAt(),
+				lastRotationAt,
+				jobStatus
+		);
+	}
+
+	public MasterKeyRotationResponse triggerRotation() {
+		MasterKeyRotationJob job = rotate();
+		return new MasterKeyRotationResponse(job.getId(), job.getStatus());
 	}
 
 	@Transactional
