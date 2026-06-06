@@ -6,7 +6,9 @@ import {
   CreateOrganizationRequest,
   CreateOrganizationResponse,
   GetCertificateResponse,
-  GetOrgsResponse
+  GetOrgsResponse,
+  MasterKeyRotationResponse,
+  MasterKeyStatusResponse
 } from './admin.types';
 
 @Injectable({ providedIn: 'root' })
@@ -27,5 +29,13 @@ export class AdminService {
 
   getCertificates(){
     return this.http.get<GetCertificateResponse[]>('/api/admin/certificates');
+  }
+
+  getMasterKeyStatus() {
+    return this.http.get<MasterKeyStatusResponse>('/api/admin/master-key');
+  }
+
+  triggerMasterKeyRotation() {
+    return this.http.post<MasterKeyRotationResponse>('/api/admin/master-key/rotate', null);
   }
 }
