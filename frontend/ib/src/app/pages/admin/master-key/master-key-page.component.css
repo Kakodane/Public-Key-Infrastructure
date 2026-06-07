@@ -1,0 +1,125 @@
+.page {
+  padding: 28px 18px;
+  display: grid;
+  place-items: start center;
+}
+
+.page__container {
+  width: min(840px, 100%);
+  display: grid;
+  gap: 18px;
+}
+
+.page__title {
+  margin: 10px 0 4px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.page__subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.section {
+  padding: 20px;
+}
+
+.section__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.section__title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.section__subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.feedback {
+  margin-bottom: 10px;
+}
+
+.status-loading {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.status-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.status-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.status-item__label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.status-item__value {
+  font-size: 13px;
+}
+
+.job-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-family: var(--mono, ui-monospace, monospace);
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.job-pill--running {
+  color: #b45309;
+  border-color: rgba(180, 83, 9, 0.35);
+  background: rgba(180, 83, 9, 0.08);
+}
+
+.job-pill--completed {
+  color: #15803d;
+  border-color: rgba(21, 128, 61, 0.35);
+  background: rgba(21, 128, 61, 0.08);
+}
+
+.job-pill--failed {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.35);
+  background: rgba(185, 28, 28, 0.08);
+}
+
+.rotate-actions {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -84,6 +84,14 @@ export const routes: Routes = [
     canActivate: [authGuard, hasRoleGuard([ROLE_ADMIN])]
   },
   {
+    path: 'admin/master-key',
+    loadComponent: () =>
+      import('./pages/admin/master-key/master-key-page.component').then(
+        (m) => m.MasterKeyPageComponent
+      ),
+    canActivate: [authGuard, hasRoleGuard([ROLE_ADMIN])]
+  },
+  {
     path: 'ca/certificates',
     loadComponent: () =>
       import('./pages/ca/certificates/ca-certificates-page.component').then(

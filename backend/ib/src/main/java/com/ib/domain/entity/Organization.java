@@ -49,6 +49,9 @@ public class Organization {
 	@Column(name = "org_key_version")
 	private Integer orgKeyVersion;
 
+	@Column(name = "master_key_version")
+	private Integer masterKeyVersion;
+
 	@OneToMany(mappedBy = "organization")
 	@Builder.Default
 	@ToString.Exclude

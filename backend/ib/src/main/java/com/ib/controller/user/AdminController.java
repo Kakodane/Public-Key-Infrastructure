@@ -1,7 +1,10 @@
 package com.ib.controller.user;
 
 import com.ib.dto.auth.GetCertificateResponse;
+import com.ib.dto.crypto.MasterKeyRotationResponse;
+import com.ib.dto.crypto.MasterKeyStatusResponse;
 import com.ib.dto.user.*;
+import com.ib.service.crypto.MasterKeyRotationService;
 import com.ib.service.user.AdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ import java.util.List;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
     private final AdminService adminService;
+    private final MasterKeyRotationService masterKeyRotationService;
 
     @GetMapping("/certificates")
     public ResponseEntity<List<GetCertificateResponse>> getCertificates() {
@@ -42,5 +46,16 @@ public class AdminController {
     @GetMapping("/organizations")
     public ResponseEntity<List<GetOrgsResponse>> getOrgs() {
         return ResponseEntity.ok(adminService.getOrgs());
+    }
+
+    @GetMapping("/master-key")
+    public ResponseEntity<MasterKeyStatusResponse> getMasterKeyStatus() {
+        return ResponseEntity.ok(masterKeyRotationService.getStatus());
+    }
+
+    @PostMapping("/master-key/rotate")
+    public ResponseEntity<MasterKeyRotationResponse> rotateMasterKey() {
+        MasterKeyRotationResponse response = masterKeyRotationService.triggerRotation();
+        return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
     }
 }

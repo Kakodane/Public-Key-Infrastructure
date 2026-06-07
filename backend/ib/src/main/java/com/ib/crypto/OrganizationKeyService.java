@@ -16,6 +16,7 @@ public class OrganizationKeyService {
 
 	private static final String AES_ALGORITHM = "AES";
 	private static final int ORG_KEY_BITS = 256;
+	private static final int LEGACY_MASTER_KEY_VERSION = 1;
 	static final int CURRENT_KEY_VERSION = 1;
 
 	private final MasterKeyProvider masterKeyProvider;
@@ -51,7 +52,7 @@ public class OrganizationKeyService {
 		byte[] rawKey = cryptoService.decrypt(
 				organization.getEncryptedOrgKey(),
 				organization.getOrgKeyNonce(),
-				masterKeyProvider.masterKey());
+				masterKeyProvider.getKey(resolveMasterKeyVersion(organization.getMasterKeyVersion())));
 		try {
 			return new SecretKeySpec(rawKey, AES_ALGORITHM);
 		} finally {
@@ -63,15 +64,43 @@ public class OrganizationKeyService {
 		byte[] rawKey = generateAesKeyBytes();
 		try {
 			AesGcmCryptoService.AesGcmResult wrapped = cryptoService.encrypt(
-					rawKey, masterKeyProvider.masterKey());
+					rawKey, masterKeyProvider.getCurrentKey());
 			organization.setEncryptedOrgKey(wrapped.ciphertext());
 			organization.setOrgKeyNonce(wrapped.nonce());
 			organization.setOrgKeyVersion(CURRENT_KEY_VERSION);
+			organization.setMasterKeyVersion(masterKeyProvider.getCurrentVersion());
 			organizationRepository.save(organization);
 			return new SecretKeySpec(rawKey, AES_ALGORITHM);
 		} finally {
 			Arrays.fill(rawKey, (byte) 0);
 		}
+	}
+
+	public void rewrapOrgKey(Organization organization, int fromVersion, int toVersion) {
+		if (!hasWrappedKey(organization)) {
+			throw new IllegalArgumentException("Organization has no wrapped org key.");
+		}
+		if (resolveMasterKeyVersion(organization.getMasterKeyVersion()) != fromVersion) {
+			throw new IllegalArgumentException(
+					"Organization master key version mismatch: expected " + fromVersion + ".");
+		}
+		byte[] rawKey = cryptoService.decrypt(
+				organization.getEncryptedOrgKey(),
+				organization.getOrgKeyNonce(),
+				masterKeyProvider.getKey(fromVersion));
+		try {
+			AesGcmCryptoService.AesGcmResult wrapped = cryptoService.encrypt(
+					rawKey, masterKeyProvider.getKey(toVersion));
+			organization.setEncryptedOrgKey(wrapped.ciphertext());
+			organization.setOrgKeyNonce(wrapped.nonce());
+			organization.setMasterKeyVersion(toVersion);
+		} finally {
+			Arrays.fill(rawKey, (byte) 0);
+		}
+	}
+
+	private static int resolveMasterKeyVersion(Integer masterKeyVersion) {
+		return masterKeyVersion != null ? masterKeyVersion : LEGACY_MASTER_KEY_VERSION;
 	}
 
 	private static byte[] generateAesKeyBytes() {
