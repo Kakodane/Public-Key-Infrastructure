@@ -7,7 +7,8 @@ import {
   CertificateDownloadService
 } from '../../../core/certificate/certificate-download.service';
 import { GetCertificateResponse } from '../../../core/admin/admin.types';
-import { CertificateStatus, RevocationReason } from '../../../core/certificate/certificate.types';
+import { CertificateStatus, RevocationReason, REVOCATION_REASONS } from '../../../core/certificate/certificate.types';
+import { CertificateRevokeService } from '../../../core/certificate/certificate-revoke.service';
 
 @Component({
   selector: 'app-ca-certificates-page',
@@ -19,7 +20,7 @@ import { CertificateStatus, RevocationReason } from '../../../core/certificate/c
 export class CaCertificatesPageComponent implements OnInit {
   private readonly ca = inject(CaService);
   private readonly certDownload = inject(CertificateDownloadService);
-
+  private readonly certRevoke = inject(CertificateRevokeService);
   readonly certificates = signal<GetCertificateResponse[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -27,7 +28,10 @@ export class CaCertificatesPageComponent implements OnInit {
   readonly downloadFormat = signal<CertificateDownloadFormat>('pem');
   readonly keystorePassword = signal('');
   readonly downloadError = signal<string | null>(null);
-
+  readonly revocationReasons = REVOCATION_REASONS;
+  readonly revokeReason = signal<RevocationReason>(RevocationReason.UNSPECIFIED);
+  readonly revoking = signal(false);
+  readonly revokeError = signal<string | null>(null);
   readonly hasCertificates = computed(() => this.certificates().length > 0);
 
   ngOnInit() {
@@ -64,6 +68,8 @@ export class CaCertificatesPageComponent implements OnInit {
     this.selectedCertificate.set(null);
     this.downloadError.set(null);
     this.keystorePassword.set('');
+    this.revokeError.set(null);
+    this.revokeReason.set(RevocationReason.UNSPECIFIED);
   }
 
   onDownloadFormatChange(format: CertificateDownloadFormat) {
@@ -84,9 +90,22 @@ export class CaCertificatesPageComponent implements OnInit {
     return value.replaceAll('_', ' ');
   }
 
-  labelRevocationReason(value: RevocationReason | null) {
+  labelRevocationReason(value: RevocationReason | string | null) {
     if (value == null) return '—';
-    return RevocationReason[value].replaceAll('_', ' ');
+    return value.replaceAll('_', ' ');
+  }
+  revoke(id: number) {
+    this.revokeError.set(null);
+    const reason = this.revokeReason();
+    if (!confirm('Revoke this certificate? This cannot be undone, and any certificates it issued will also be revoked.')) {
+      return;
+    }
+    this.revoking.set(true);
+    this.certRevoke.revoke(id, reason).subscribe({
+      next: () => this.loadCertificates(),
+      error: (err) => this.revokeError.set(extractError(err)),
+      complete: () => this.revoking.set(false)
+    });
   }
 
   downloadCertificate(id: number) {
