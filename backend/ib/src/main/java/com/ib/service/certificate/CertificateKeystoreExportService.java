@@ -27,6 +27,42 @@ public class CertificateKeystoreExportService {
 
 	private final CertificatePrivateKeyCipher privateKeyCipher;
 
+	public byte[] exportEphemeralKeystore(
+			byte[] pkcs8PrivateKey,
+			Certificate leaf,
+			String format,
+			char[] keystorePassword
+	) {
+		if (pkcs8PrivateKey == null || pkcs8PrivateKey.length == 0) {
+			throw new IllegalArgumentException("Private key must not be empty");
+		}
+		if (leaf == null) {
+			throw new IllegalArgumentException("Certificate must not be null");
+		}
+		if (keystorePassword == null || keystorePassword.length == 0) {
+			throw new IllegalArgumentException("Keystore password must not be empty");
+		}
+
+		String keystoreType = "jks".equalsIgnoreCase(format) ? "JKS" : PKCS12_TYPE;
+
+		try {
+			PrivateKey privateKey = reconstructRsaPrivateKey(pkcs8PrivateKey);
+			java.security.cert.Certificate[] chain = buildChain(leaf);
+
+			KeyStore keyStore = KeyStore.getInstance(keystoreType);
+			keyStore.load(null, null);
+			keyStore.setKeyEntry(resolveAlias(leaf), privateKey, keystorePassword, chain);
+
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			keyStore.store(out, keystorePassword);
+			return out.toByteArray();
+		} catch (IllegalArgumentException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new IllegalStateException("Failed to export " + keystoreType + " keystore", e);
+		}
+	}
+
 	public byte[] exportPkcs12(Certificate leaf, char[] keystorePassword) {
 		if (leaf == null) {
 			throw new IllegalArgumentException("certificate must not be null");
