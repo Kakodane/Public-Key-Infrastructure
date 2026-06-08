@@ -20,4 +20,7 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
 	boolean existsByTypeAndStatus(CertificateType type, CertificateStatus status);
 
     List<Certificate> findAll();
+    List<Certificate> findAllByIssuer_Id(Long issuerId);
+
+    List<Certificate> findAllByTypeNot(CertificateType type);
 }

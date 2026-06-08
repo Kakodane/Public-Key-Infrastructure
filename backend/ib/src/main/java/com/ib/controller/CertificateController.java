@@ -1,11 +1,7 @@
 package com.ib.controller;
 
 import com.ib.dto.auth.GetCertificateResponse;
-import com.ib.dto.certificate.CertificateDownload;
-import com.ib.dto.certificate.CreateEndEntityCertificateRequest;
-import com.ib.dto.certificate.DownloadCertificateRequest;
-import com.ib.dto.certificate.CreateIntermediateCertificateRequest;
-import com.ib.dto.certificate.CreateRootCertificateRequest;
+import com.ib.dto.certificate.*;
 import com.ib.service.certificate.CertificateService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -55,7 +51,16 @@ public class CertificateController {
 		return ResponseEntity.ok(certificateService.issueEndEntity(request));
 	}
 
-	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+    @PostMapping("/{id}/revoke")
+    public ResponseEntity<GetCertificateResponse> revokeCertificate(
+            @PathVariable Long id,
+            @Valid @RequestBody RevokeCertificateRequest request
+    ) {
+        return ResponseEntity.ok(certificateService.revoke(id, request));
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
 	@GetMapping("/{id}/download")
 	public ResponseEntity<byte[]> downloadCertificate(
 			@PathVariable Long id,

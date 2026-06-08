@@ -5,7 +5,8 @@ import {
   CertificateDownloadFormat,
   CertificateDownloadService
 } from '../../../core/certificate/certificate-download.service';
-import {CertificateStatus, CertificateType, RevocationReason} from '../../../core/certificate/certificate.types';
+import {CertificateStatus, CertificateType, RevocationReason, REVOCATION_REASONS} from '../../../core/certificate/certificate.types';
+import { CertificateRevokeService } from '../../../core/certificate/certificate-revoke.service';
 import { GetCertificateResponse } from '../../../core/admin/admin.types';
 
 @Component({
@@ -18,7 +19,7 @@ import { GetCertificateResponse } from '../../../core/admin/admin.types';
 export class CertificatesPageComponent implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly certDownload = inject(CertificateDownloadService);
-
+  private readonly certRevoke = inject(CertificateRevokeService);
   readonly certificates = signal<GetCertificateResponse[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -26,6 +27,10 @@ export class CertificatesPageComponent implements OnInit {
   readonly downloadFormat = signal<CertificateDownloadFormat>('pem');
   readonly keystorePassword = signal('');
   readonly downloadError = signal<string | null>(null);
+  readonly revocationReasons = REVOCATION_REASONS;
+  readonly revokeReason = signal<RevocationReason>(RevocationReason.UNSPECIFIED);
+  readonly revoking = signal(false);
+  readonly revokeError = signal<string | null>(null);
 
   readonly hasCertificates = computed(() => this.certificates().length > 0);
 
@@ -63,6 +68,8 @@ export class CertificatesPageComponent implements OnInit {
     this.selectedCertificate.set(null);
     this.downloadError.set(null);
     this.keystorePassword.set('');
+    this.revokeError.set(null);
+    this.revokeReason.set(RevocationReason.UNSPECIFIED);
   }
 
   onDownloadFormatChange(format: CertificateDownloadFormat) {
@@ -87,11 +94,23 @@ export class CertificatesPageComponent implements OnInit {
     return value;
   }
 
-  labelRevocationReason(value: RevocationReason | null) {
+  labelRevocationReason(value: RevocationReason | string | null) {
     if (value == null) return '—';
-    return RevocationReason[value].replaceAll('_', ' ');
+      return value.replaceAll('_', ' ');
   }
-
+  revoke(id: number) {
+    this.revokeError.set(null);
+    const reason = this.revokeReason();
+    if (!confirm('Revoke this certificate? This cannot be undone, and any certificates it issued will also be revoked.')) {
+      return;
+    }
+    this.revoking.set(true);
+    this.certRevoke.revoke(id, reason).subscribe({
+      next: () => this.loadCertificates(),
+      error: (err) => this.revokeError.set(extractError(err)),
+      complete: () => this.revoking.set(false)
+    });
+  }
   downloadCertificate(id: number) {
     const format = this.downloadFormat();
     this.downloadError.set(null);
