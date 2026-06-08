@@ -1,11 +1,15 @@
 package com.ib.controller;
 
 import com.ib.dto.auth.GetCertificateResponse;
+import com.ib.dto.certificate.AutogenerateEeCertificateRequest;
+import com.ib.dto.certificate.AutogenerateEeCertificateResponse;
 import com.ib.dto.certificate.CertificateDownload;
+import com.ib.dto.certificate.CreateCsrCertificateRequest;
 import com.ib.dto.certificate.CreateEndEntityCertificateRequest;
 import com.ib.dto.certificate.DownloadCertificateRequest;
 import com.ib.dto.certificate.CreateIntermediateCertificateRequest;
 import com.ib.dto.certificate.CreateRootCertificateRequest;
+import com.ib.dto.certificate.GetIssuerCertificateResponse;
 import com.ib.service.certificate.CertificateService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/certificates")
@@ -53,6 +59,28 @@ public class CertificateController {
 			@Valid @RequestBody CreateEndEntityCertificateRequest request
 	) {
 		return ResponseEntity.ok(certificateService.issueEndEntity(request));
+	}
+
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@GetMapping("/issuers")
+	public ResponseEntity<List<GetIssuerCertificateResponse>> getAvailableIssuers() {
+		return ResponseEntity.ok(certificateService.getAvailableIssuers());
+	}
+
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@PostMapping("/csr")
+	public ResponseEntity<GetCertificateResponse> createCsrCertificate(
+			@Valid @RequestBody CreateCsrCertificateRequest request
+	) {
+		return ResponseEntity.ok(certificateService.issueCsrCertificate(request));
+	}
+
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@PostMapping("/autogenerate")
+	public ResponseEntity<AutogenerateEeCertificateResponse> autogenerateEeCertificate(
+			@Valid @RequestBody AutogenerateEeCertificateRequest request
+	) {
+		return ResponseEntity.ok(certificateService.autogenerateEeCertificate(request));
 	}
 
 	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
