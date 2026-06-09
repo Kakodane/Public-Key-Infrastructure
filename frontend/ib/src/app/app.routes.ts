@@ -68,6 +68,14 @@ export const routes: Routes = [
     canActivate: [authGuard, hasRoleGuard([ROLE_REGULAR_USER])]
   },
   {
+    path: 'regular/certificates/issue',
+    loadComponent: () =>
+      import('./pages/regular/regular-certificates-issue/regular-certificates-issue-page.component').then(
+        (m) => m.RegularCertificatesIssuePageComponent
+      ),
+    canActivate: [authGuard, hasRoleGuard([ROLE_REGULAR_USER])]
+  },
+  {
     path: 'admin/certificates',
     loadComponent: () =>
       import('./pages/admin/certificates/certificates-page.component').then(

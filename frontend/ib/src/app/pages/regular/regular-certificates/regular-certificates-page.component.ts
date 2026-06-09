@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { CertificateDownloadService } from '../../../core/certificate/certificate-download.service';
 import { RegularService } from '../../../core/regular/regular.service';
 import { RegularCertificateResponse } from '../../../core/regular/regular.types';
@@ -15,6 +16,7 @@ import { RevocationReason, REVOCATION_REASONS, labelRevocationReason } from '../
 })
 export class RegularCertificatesPageComponent implements OnInit {
   private readonly certDownload = inject(CertificateDownloadService);
+  private readonly router = inject(Router);
   private readonly certRevoke = inject(CertificateRevokeService);
   readonly certificates = signal<RegularCertificateResponse[]>([]);
   readonly isLoading = signal(false);
@@ -87,5 +89,9 @@ export class RegularCertificatesPageComponent implements OnInit {
 
   downloadCertificate(id: number, format: 'pem' | 'cer') {
     this.certDownload.download(id, format);
+  }
+
+  goToIssuePage(): void {
+    void this.router.navigate(['/regular/certificates/issue']);
   }
 }

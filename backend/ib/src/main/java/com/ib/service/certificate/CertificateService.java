@@ -17,6 +17,11 @@ import com.ib.dto.certificate.*;
 import com.ib.security.AuthenticatedUser;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,10 +29,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.util.Base64;
+import java.util.List;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -158,6 +167,114 @@ public class CertificateService {
 
 		Certificate saved = certificateRepository.save(certificate);
 		return new GetCertificateResponse(saved);
+	}
+
+	@Transactional(readOnly = true)
+	public List<GetIssuerCertificateResponse> getAvailableIssuers() {
+		User caller = requireCallerUser();
+		List<Certificate> candidates;
+		if (caller.getRole() == Role.ADMIN) {
+			candidates = certificateRepository.findAll();
+		} else {
+			if (caller.getOrganization() == null) {
+				return List.of();
+			}
+			candidates = certificateRepository.findAllByOrganization_Id(caller.getOrganization().getId());
+		}
+		return candidates.stream()
+				.filter(c -> c.getType() != CertificateType.END_ENTITY)
+				.filter(c -> c.getStatus() == CertificateStatus.ACTIVE)
+				.map(GetIssuerCertificateResponse::new)
+				.collect(Collectors.toList());
+	}
+
+	@Transactional
+	public GetCertificateResponse issueCsrCertificate(CreateCsrCertificateRequest request) {
+		User caller = requireCallerUser();
+
+		Certificate issuer = certificateRepository.findById(request.issuerCertificateId())
+				.orElseThrow(() -> new EntityNotFoundException("Issuer not found: " + request.issuerCertificateId()));
+
+		authorizeEndEntityIssuance(caller, caller, issuer);
+		issuerValidator.validateForIssuing(issuer, request.notBefore(), request.notAfter(), CertificateType.END_ENTITY);
+
+		PKCS10CertificationRequest csr = parseCsr(request.csrPem());
+
+		GeneratedCertificate generated = generationService.generateFromCsr(
+				csr, issuer, privateKeyCipher.loadPrivateKey(issuer.getId()),
+				request.notBefore(), request.notAfter());
+
+		Certificate certificate = Certificate.builder()
+				.serialNumber(generated.serialNumber())
+				.type(CertificateType.END_ENTITY)
+				.status(CertificateStatus.ACTIVE)
+				.organization(caller.getOrganization())
+				.owner(caller)
+				.issuer(issuer)
+				.subject(toSubjectFieldsFromX500Name(csr.getSubject()))
+				.notBefore(request.notBefore())
+				.notAfter(request.notAfter())
+				.certificatePem(generated.certificatePem())
+				.build();
+
+		Certificate saved = certificateRepository.save(certificate);
+		return new GetCertificateResponse(saved);
+	}
+
+	@Transactional
+	public AutogenerateEeCertificateResponse autogenerateEeCertificate(AutogenerateEeCertificateRequest request) {
+		User caller = requireCallerUser();
+
+		Certificate issuer = certificateRepository.findById(request.issuerCertificateId())
+				.orElseThrow(() -> new EntityNotFoundException("Issuer not found: " + request.issuerCertificateId()));
+
+		authorizeEndEntityIssuance(caller, caller, issuer);
+		issuerValidator.validateForIssuing(issuer, request.notBefore(), request.notAfter(), CertificateType.END_ENTITY);
+
+		CreateEndEntityCertificateRequest eeRequest = new CreateEndEntityCertificateRequest(
+				request.issuerCertificateId(),
+				caller.getEmail(),
+				request.subject(),
+				request.notBefore(),
+				request.notAfter(),
+				null
+		);
+
+		GeneratedCertificate generated = generationService.generateEndEntity(
+				eeRequest, issuer, privateKeyCipher.loadPrivateKey(issuer.getId()));
+
+		Certificate certificate = Certificate.builder()
+				.serialNumber(generated.serialNumber())
+				.type(CertificateType.END_ENTITY)
+				.status(CertificateStatus.ACTIVE)
+				.organization(caller.getOrganization())
+				.owner(caller)
+				.issuer(issuer)
+				.subject(toSubjectFields(request.subject()))
+				.notBefore(request.notBefore())
+				.notAfter(request.notAfter())
+				.certificatePem(generated.certificatePem())
+				.build();
+		// Intentionally NOT attaching private key — it is returned ephemerally in the response
+
+		Certificate saved = certificateRepository.save(certificate);
+
+		String format = request.keystoreFormat().trim().toLowerCase();
+		byte[] keystoreBytes = keystoreExportService.exportEphemeralKeystore(
+				generated.pkcs8PrivateKey(),
+				saved,
+				format,
+				request.keystorePassword().toCharArray()
+		);
+
+		String ext = "jks".equals(format) ? ".jks" : ".p12";
+		String keystoreBase64 = Base64.getEncoder().encodeToString(keystoreBytes);
+
+		return new AutogenerateEeCertificateResponse(
+				new GetCertificateResponse(saved),
+				keystoreBase64,
+				saved.getSerialNumber() + ext
+		);
 	}
 
 	@Transactional(readOnly = true)
@@ -332,6 +449,36 @@ public class CertificateService {
 				.country(r.country())
 				.emailAddress(r.emailAddress())
 				.build();
+	}
+
+	private static PKCS10CertificationRequest parseCsr(String csrPem) {
+		try (PEMParser parser = new PEMParser(new StringReader(csrPem))) {
+			Object obj = parser.readObject();
+			if (!(obj instanceof PKCS10CertificationRequest csr)) {
+				throw new CertificateIssuanceException("Invalid CSR: expected PKCS#10 format");
+			}
+			return csr;
+		} catch (CertificateIssuanceException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new CertificateIssuanceException("Failed to parse CSR PEM: " + e.getMessage());
+		}
+	}
+
+	private static X509SubjectFields toSubjectFieldsFromX500Name(X500Name name) {
+		return X509SubjectFields.builder()
+				.commonName(getRdnValue(name, BCStyle.CN))
+				.organization(getRdnValue(name, BCStyle.O))
+				.organizationalUnit(getRdnValue(name, BCStyle.OU))
+				.country(getRdnValue(name, BCStyle.C))
+				.emailAddress(getRdnValue(name, BCStyle.E))
+				.build();
+	}
+
+	private static String getRdnValue(X500Name name, org.bouncycastle.asn1.ASN1ObjectIdentifier oid) {
+		org.bouncycastle.asn1.x500.RDN[] rdns = name.getRDNs(oid);
+		if (rdns.length == 0) return null;
+		return IETFUtils.valueToString(rdns[0].getFirst().getValue());
 	}
 
 	private static void validateExtensionsOrThrow(CertificateExtensionsRequest extensions, CertificateType type) {

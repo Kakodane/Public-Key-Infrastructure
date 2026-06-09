@@ -18,6 +18,8 @@ import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +33,7 @@ import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -275,7 +278,59 @@ public class CertificateGenerationService {
 		return new ExtendedKeyUsage(purposes);
 	}
 
-	private KeyPair generateRsaKeyPair(int keySize) throws Exception {
+	public GeneratedCertificate generateFromCsr(
+			PKCS10CertificationRequest csr,
+			Certificate issuer,
+			byte[] issuerPrivateKeyPkcs8,
+			java.time.Instant notBefore,
+			java.time.Instant notAfter
+	) {
+		try {
+			X509Certificate issuerCert = parsePem(issuer.getCertificatePem());
+			PrivateKey issuerSigningKey = reconstructRsaPrivateKey(issuerPrivateKeyPkcs8);
+
+			PublicKey subjectPublicKey = new org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter()
+					.setProvider(BC_PROVIDER)
+					.getPublicKey(csr.getSubjectPublicKeyInfo());
+
+			boolean signatureValid = csr.isSignatureValid(
+					new JcaContentVerifierProviderBuilder().setProvider(BC_PROVIDER).build(subjectPublicKey));
+			if (!signatureValid) {
+				throw new CertificateGenerationException("CSR signature verification failed.", null);
+			}
+
+			X500Name subject = csr.getSubject();
+			BigInteger serial = nextSerial();
+
+			JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(
+					issuerCert,
+					serial,
+					Date.from(notBefore),
+					Date.from(notAfter),
+					subject,
+					subjectPublicKey
+			);
+
+			JcaX509ExtensionUtils extUtils = new JcaX509ExtensionUtils();
+			builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false));
+			builder.addExtension(Extension.keyUsage, true,
+					new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
+			builder.addExtension(Extension.subjectKeyIdentifier, false,
+					extUtils.createSubjectKeyIdentifier(subjectPublicKey));
+			builder.addExtension(Extension.authorityKeyIdentifier, false,
+					extUtils.createAuthorityKeyIdentifier(issuerCert.getPublicKey()));
+
+			X509Certificate cert = signAndConvert(builder, issuerSigningKey);
+
+			return new GeneratedCertificate(toPem(cert), null, serial.toString(16));
+		} catch (CertificateGenerationException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new CertificateGenerationException("Failed to generate certificate from CSR.", e);
+		}
+	}
+
+	KeyPair generateRsaKeyPair(int keySize) throws Exception {
 		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA", BC_PROVIDER);
 		keyGen.initialize(keySize, secureRandom);
 		return keyGen.generateKeyPair();

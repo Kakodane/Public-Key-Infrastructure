@@ -3,9 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { GetCertificateResponse } from '../admin/admin.types';
 import {
+  AutogenerateEeCertificateRequest,
+  AutogenerateEeCertificateResponse,
+  CreateCsrCertificateRequest,
   CreateEndEntityCertificateRequest,
   CreateIntermediateCertificateRequest,
-  CreateRootCertificateRequest
+  CreateRootCertificateRequest,
+  GetIssuerCertificateResponse
 } from './certificate-issue.types';
 
 
@@ -27,5 +31,19 @@ export class CertificateIssueService {
     request: CreateEndEntityCertificateRequest
   ): Observable<GetCertificateResponse> {
     return this.http.post<GetCertificateResponse>('/api/certificates/end-entity', request);
+  }
+
+  getAvailableIssuers(): Observable<GetIssuerCertificateResponse[]> {
+    return this.http.get<GetIssuerCertificateResponse[]>('/api/certificates/issuers');
+  }
+
+  issueCsrCertificate(request: CreateCsrCertificateRequest): Observable<GetCertificateResponse> {
+    return this.http.post<GetCertificateResponse>('/api/certificates/csr', request);
+  }
+
+  autogenerateEeCertificate(
+    request: AutogenerateEeCertificateRequest
+  ): Observable<AutogenerateEeCertificateResponse> {
+    return this.http.post<AutogenerateEeCertificateResponse>('/api/certificates/autogenerate', request);
   }
 }

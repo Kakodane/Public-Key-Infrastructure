@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/certificates")
 public class CertificateController {
@@ -51,16 +53,38 @@ public class CertificateController {
 		return ResponseEntity.ok(certificateService.issueEndEntity(request));
 	}
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
-    @PostMapping("/{id}/revoke")
-    public ResponseEntity<GetCertificateResponse> revokeCertificate(
-            @PathVariable Long id,
-            @Valid @RequestBody RevokeCertificateRequest request
-    ) {
-        return ResponseEntity.ok(certificateService.revoke(id, request));
-    }
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@GetMapping("/issuers")
+	public ResponseEntity<List<GetIssuerCertificateResponse>> getAvailableIssuers() {
+		return ResponseEntity.ok(certificateService.getAvailableIssuers());
+	}
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@PostMapping("/csr")
+	public ResponseEntity<GetCertificateResponse> createCsrCertificate(
+			@Valid @RequestBody CreateCsrCertificateRequest request
+	) {
+		return ResponseEntity.ok(certificateService.issueCsrCertificate(request));
+	}
+
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@PostMapping("/autogenerate")
+	public ResponseEntity<AutogenerateEeCertificateResponse> autogenerateEeCertificate(
+			@Valid @RequestBody AutogenerateEeCertificateRequest request
+	) {
+		return ResponseEntity.ok(certificateService.autogenerateEeCertificate(request));
+	}
+
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
+	@PostMapping("/{id}/revoke")
+	public ResponseEntity<GetCertificateResponse> revokeCertificate(
+			@PathVariable Long id,
+			@Valid @RequestBody RevokeCertificateRequest request
+	) {
+		return ResponseEntity.ok(certificateService.revoke(id, request));
+	}
+
+	@PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'REGULAR_USER')")
 	@GetMapping("/{id}/download")
 	public ResponseEntity<byte[]> downloadCertificate(
 			@PathVariable Long id,
