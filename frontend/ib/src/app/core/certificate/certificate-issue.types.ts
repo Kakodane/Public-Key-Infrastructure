@@ -1,4 +1,4 @@
-
+import { GetCertificateResponse } from '../admin/admin.types';
 
 export const CertificateKeyUsage = {
   DIGITAL_SIGNATURE: 'DIGITAL_SIGNATURE',
@@ -63,4 +63,36 @@ export type CreateEndEntityCertificateRequest = {
   notBefore: string;
   notAfter: string;
   extensions?: CertificateExtensionsRequest;
+};
+
+export type GetIssuerCertificateResponse = {
+  id: number;
+  serialNumber: string;
+  subjectCommonName: string;
+  organizationName: string;
+  type: string;
+  notBefore: string;
+  notAfter: string;
+};
+
+export type CreateCsrCertificateRequest = {
+  csrPem: string;
+  issuerCertificateId: number;
+  notBefore: string;
+  notAfter: string;
+};
+
+export type AutogenerateEeCertificateRequest = {
+  issuerCertificateId: number;
+  subject: X500NameRequest;
+  notBefore: string;
+  notAfter: string;
+  keystoreFormat: 'pkcs12' | 'jks';
+  keystorePassword: string;
+};
+
+export type AutogenerateEeCertificateResponse = {
+  certificate: GetCertificateResponse;
+  keystoreBase64: string;
+  keystoreFilename: string;
 };
