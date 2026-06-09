@@ -128,7 +128,8 @@ export class CertificatesIssuePageComponent implements OnInit {
         Object.fromEntries(
           EXT_KEY_USAGE_OPTIONS.map((b) => [b.id, new FormControl(false, { nonNullable: true })])
         ) as Record<CertificateExtendedKeyUsage, FormControl<boolean>>
-      )
+      ),
+      subjectAlternativeNames: new FormControl('', { nonNullable: true })
     })
   });
 
@@ -319,15 +320,26 @@ function buildExtensions(e: {
   pathLenConstraint: number | null;
   keyUsages: Record<CertificateKeyUsage, boolean>;
   extendedKeyUsages: Record<CertificateExtendedKeyUsage, boolean>;
+  subjectAlternativeNames: string;
 }): CertificateExtensionsRequest {
   const keyUsages = collectChecked(e.keyUsages) as CertificateKeyUsage[];
   const extendedKeyUsages = collectChecked(e.extendedKeyUsages) as CertificateExtendedKeyUsage[];
+  const sans = parseSans(e.subjectAlternativeNames);
   return {
     isCa: e.isCa,
     pathLenConstraint: e.isCa ? e.pathLenConstraint : null,
     keyUsages: keyUsages.length ? keyUsages : undefined,
-    extendedKeyUsages: extendedKeyUsages.length ? extendedKeyUsages : undefined
+    extendedKeyUsages: extendedKeyUsages.length ? extendedKeyUsages : undefined,
+    subjectAlternativeNames: sans.length ? sans : undefined
+    
   };
+}
+function parseSans(raw: string): string[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }
 
 function collectChecked<T extends string>(map: Record<T, boolean>): T[] {
