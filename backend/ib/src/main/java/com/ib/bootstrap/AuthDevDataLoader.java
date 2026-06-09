@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
  * Seeds demo users (checkpoint: direct DB inserts). Password for all: {@value #DEMO_PASSWORD}.
  */
 @Component
-@Order(0)
+@Order(10)
 public class AuthDevDataLoader implements CommandLineRunner {
 
 	static final String DEMO_PASSWORD = "ChangeMe1!";

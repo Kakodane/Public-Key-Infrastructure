@@ -40,6 +40,7 @@ public class SecurityConfig {
 						.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD, DispatcherType.ASYNC).permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/2fa/verify").permitAll()
 						.requestMatchers("/h2-console", "/h2-console/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/crl/**").permitAll()
 						.requestMatchers(HttpMethod.PUT, "/api/ca/password").permitAll()
                         .requestMatchers("/api/registration/**").permitAll()
                         .requestMatchers("/api/password-reset/**").permitAll()

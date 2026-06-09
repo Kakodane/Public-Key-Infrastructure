@@ -1,0 +1,82 @@
+<div class="page">
+  <div class="page__container">
+    <div>
+      <div class="ti-pill ti-mono ti-pill--info">/api/admin/master-key</div>
+      <h1 class="page__title">Master key</h1>
+      <p class="page__subtitle">
+        View the active master key version and trigger manual rotation. Rotation
+        re-wraps organization keys and TOTP secrets without touching certificate
+        private keys.
+      </p>
+    </div>
+
+    <section class="ti-card section">
+      <div class="section__header">
+        <div>
+          <h2 class="section__title">Current status</h2>
+          <p class="section__subtitle">
+            Data from <span class="ti-mono">GET /api/admin/master-key</span>.
+          </p>
+        </div>
+
+        <button class="ti-btn ti-btn-ghost" type="button" (click)="loadStatus()" [disabled]="loading()">
+          @if (loading()) { Refreshing… } @else { Refresh }
+        </button>
+      </div>
+
+      @if (error()) {
+        <div class="ti-err ti-mono feedback">{{ error() }}</div>
+      }
+
+      @if (loading() && !status()) {
+        <div class="ti-mono status-loading">Loading master key status…</div>
+      } @else if (status(); as s) {
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-item__label">Current version</span>
+            <span class="status-item__value ti-mono">{{ s.currentVersion }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-item__label">Key created at</span>
+            <span class="status-item__value ti-mono">{{ formatDate(s.createdAt) }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-item__label">Last rotation</span>
+            <span class="status-item__value ti-mono">{{ formatDate(s.lastRotationAt) }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-item__label">Latest job</span>
+            <span
+              class="job-pill"
+              [class.job-pill--running]="s.jobStatus === 'RUNNING'"
+              [class.job-pill--completed]="s.jobStatus === 'COMPLETED'"
+              [class.job-pill--failed]="s.jobStatus === 'FAILED'"
+            >
+              {{ labelJobStatus(s.jobStatus) }}
+            </span>
+          </div>
+        </div>
+      }
+
+      <div class="rotate-actions">
+        @if (rotateError()) {
+          <div class="ti-err ti-mono feedback">{{ rotateError() }}</div>
+        }
+        @if (rotateOk()) {
+          <div class="ti-ok ti-mono feedback">{{ rotateOk() }}</div>
+        }
+
+        <button
+          class="ti-btn"
+          type="button"
+          (click)="rotateNow()"
+          [disabled]="rotateBusy() || isRotationRunning()"
+        >
+          @if (rotateBusy()) { Starting… }
+          @else if (isRotationRunning()) { Rotation in progress… }
+          @else { Rotate now }
+        </button>
+      </div>
+    </section>
+  </div>
+</div>

@@ -168,6 +168,25 @@
               Download
             </button>
           </div>
+           @if (selected.status === 'ACTIVE') {
+            @if (revokeError()) {
+              <div class="ti-err ti-mono download-feedback">{{ revokeError() }}</div>
+            }
+            <div class="revoke-group">
+              <select
+                class="ti-input"
+                [value]="revokeReason()"
+                (change)="revokeReason.set($any($event.target).value)"
+              >
+                @for (reason of revocationReasons; track reason) {
+                  <option [value]="reason">{{ labelRevocationReason(reason) }}</option>
+                }
+              </select>
+              <button class="ti-btn ti-btn-danger" type="button" [disabled]="revoking()" (click)="revoke(selected.id)">
+                @if (revoking()) { Revoking… } @else { Revoke }
+              </button>
+            </div>
+          }
         </div>
       </section>
     }

@@ -5,6 +5,7 @@ import com.ib.domain.embeddable.X509SubjectFields;
 import com.ib.domain.entity.Certificate;
 import com.ib.domain.entity.Organization;
 import com.ib.domain.entity.User;
+import com.ib.domain.enums.RevocationReason;
 import com.ib.domain.enums.Role;
 import com.ib.domain.enums.CertificateStatus;
 import com.ib.domain.enums.CertificateType;
@@ -12,18 +13,7 @@ import com.ib.domain.repository.CertificateRepository;
 import com.ib.domain.repository.OrganizationRepository;
 import com.ib.domain.repository.UserRepository;
 import com.ib.dto.auth.GetCertificateResponse;
-import com.ib.dto.certificate.AutogenerateEeCertificateRequest;
-import com.ib.dto.certificate.AutogenerateEeCertificateResponse;
-import com.ib.dto.certificate.CertificateDownload;
-import com.ib.dto.certificate.CertificateExtensionsRequest;
-import com.ib.dto.certificate.CreateCsrCertificateRequest;
-import com.ib.dto.certificate.DownloadCertificateRequest;
-import com.ib.dto.certificate.CertificateKeyUsage;
-import com.ib.dto.certificate.CreateEndEntityCertificateRequest;
-import com.ib.dto.certificate.CreateIntermediateCertificateRequest;
-import com.ib.dto.certificate.CreateRootCertificateRequest;
-import com.ib.dto.certificate.GetIssuerCertificateResponse;
-import com.ib.dto.certificate.X500NameRequest;
+import com.ib.dto.certificate.*;
 import com.ib.security.AuthenticatedUser;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +33,7 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -59,6 +50,7 @@ public class CertificateService {
 	private final OrganizationRepository organizationRepository;
 	private final CertificateRepository certificateRepository;
 	private final UserRepository userRepository;
+    private final CrlService crlService;
 
 	@Transactional
 	public GetCertificateResponse issueRoot(CreateRootCertificateRequest request) {
@@ -525,4 +517,67 @@ public class CertificateService {
 			}
 		}
 	}
+
+    @Transactional
+    public GetCertificateResponse revoke(Long id, RevokeCertificateRequest request) {
+        User caller = requireCallerUser();
+        Certificate certificate = certificateRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Certificate not found: " + id));
+
+        authorizeDownload(caller, certificate);
+
+        if (certificate.getStatus() == CertificateStatus.REVOKED) {
+            throw new CertificateIssuanceException("Certificate is already revoked.");
+        }
+
+        Instant now = Instant.now();
+        java.util.Set<Long> affectedCaIds = new java.util.HashSet<>();
+
+        revokeSingle(certificate, request.reason(), now);
+        if (certificate.getIssuer() != null) {
+            affectedCaIds.add(certificate.getIssuer().getId());
+        }
+
+        if (certificate.getType() != CertificateType.END_ENTITY) {
+            cascadeRevoke(certificate, now, affectedCaIds);
+        }
+
+        Certificate saved = certificateRepository.save(certificate);
+
+        for (Long caId : affectedCaIds) {
+            crlService.regenerateForCa(caId);
+        }
+
+        return new GetCertificateResponse(saved);
+    }
+
+    private static void revokeSingle(Certificate certificate, RevocationReason reason, Instant when) {
+        certificate.setStatus(CertificateStatus.REVOKED);
+        certificate.setRevokedAt(when);
+        certificate.setRevocationReason(reason);
+    }
+
+    private void cascadeRevoke(Certificate ca, Instant when, java.util.Set<Long> affectedCaIds) {
+        java.util.Deque<Certificate> stack = new java.util.ArrayDeque<>();
+        java.util.Set<Long> visited = new java.util.HashSet<>();
+        stack.push(ca);
+        while (!stack.isEmpty()) {
+            Certificate current = stack.pop();
+            if (current.getId() != null && !visited.add(current.getId())) {
+                continue;
+            }
+            for (Certificate child : certificateRepository.findAllByIssuer_Id(current.getId())) {
+                if (child.getId() != null && child.getId().equals(current.getId())) {
+                    continue;
+                }
+                if (child.getStatus() != CertificateStatus.REVOKED) {
+                    revokeSingle(child, RevocationReason.CESSATION_OF_OPERATION, when);
+                    certificateRepository.save(child);
+                    affectedCaIds.add(current.getId());
+                }
+                stack.push(child);
+            }
+        }
+    }
+
 }

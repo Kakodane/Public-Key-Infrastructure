@@ -158,3 +158,13 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+.ti-btn-danger { background: #c0392b; }
+.ti-btn-danger:hover:not(:disabled) { background: #a93226; opacity: 1; }
+
+.revoke-group {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 12px;
+}

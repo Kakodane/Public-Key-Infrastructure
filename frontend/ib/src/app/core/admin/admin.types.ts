@@ -43,3 +43,17 @@ export type GetCertificateResponse={
   revokedAt: string | null;
   revocationReason:RevocationReason | null;
 }
+
+export type MasterKeyRotationJobStatus = 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export type MasterKeyStatusResponse = {
+  currentVersion: number;
+  createdAt: string;
+  lastRotationAt: string | null;
+  jobStatus: MasterKeyRotationJobStatus | null;
+};
+
+export type MasterKeyRotationResponse = {
+  jobId: number;
+  status: MasterKeyRotationJobStatus;
+};

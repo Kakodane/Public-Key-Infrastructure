@@ -11,11 +11,7 @@ import com.ib.dto.certificate.X500NameRequest;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.KeyUsage;
-import org.bouncycastle.asn1.x509.KeyPurposeId;
+import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
@@ -26,6 +22,7 @@ import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -57,6 +54,9 @@ public class CertificateGenerationService {
 	private static final int SERIAL_BIT_LENGTH = 128;
 
 	private final SecureRandom secureRandom = new SecureRandom();
+
+    @Value("${app.crl.base-url}")
+    private String crlBaseUrl;
 
 	public GeneratedCertificate generateRoot(CreateRootCertificateRequest request) {
 		try {
@@ -115,7 +115,7 @@ public class CertificateGenerationService {
 			addRequestedExtensions(builder, request.extensions(), true);
 			builder.addExtension(Extension.subjectKeyIdentifier, false, extUtils.createSubjectKeyIdentifier(keyPair.getPublic()));
 			builder.addExtension(Extension.authorityKeyIdentifier, false, extUtils.createAuthorityKeyIdentifier(issuerCert.getPublicKey()));
-
+            addCrlDistributionPoint(builder, issuer.getId());
 			X509Certificate cert = signAndConvert(builder, issuerSigningKey);
 
 			return new GeneratedCertificate(
@@ -155,7 +155,7 @@ public class CertificateGenerationService {
 			addRequestedExtensions(builder, request.extensions(), false);
 			builder.addExtension(Extension.subjectKeyIdentifier, false, extUtils.createSubjectKeyIdentifier(keyPair.getPublic()));
 			builder.addExtension(Extension.authorityKeyIdentifier, false, extUtils.createAuthorityKeyIdentifier(issuerCert.getPublicKey()));
-
+            addCrlDistributionPoint(builder, issuer.getId());
 			X509Certificate cert = signAndConvert(builder, issuerSigningKey);
 
 			return new GeneratedCertificate(
@@ -169,7 +169,16 @@ public class CertificateGenerationService {
 		}
 	}
 
-
+    private void addCrlDistributionPoint(JcaX509v3CertificateBuilder builder, Long issuerCertificateId) throws Exception {
+        if (issuerCertificateId == null || crlBaseUrl == null || crlBaseUrl.isBlank()) {
+            return;
+        }
+        String url = crlBaseUrl + "/" + issuerCertificateId + ".crl";
+        GeneralName gn = new GeneralName(GeneralName.uniformResourceIdentifier, url);
+        DistributionPointName dpn = new DistributionPointName(new GeneralNames(gn));
+        DistributionPoint dp = new DistributionPoint(dpn, null, null);
+        builder.addExtension(Extension.cRLDistributionPoints, false, new CRLDistPoint(new DistributionPoint[]{dp}));
+    }
 	private static X500Name buildX500Name(X500NameRequest r) {
 		X500NameBuilder nb = new X500NameBuilder();
 		nb.addRDN(BCStyle.CN, r.commonName());
