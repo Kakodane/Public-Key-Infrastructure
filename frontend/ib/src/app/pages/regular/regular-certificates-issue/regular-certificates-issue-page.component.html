@@ -130,11 +130,11 @@
               Upload the .pem CSR you generated with openssl or another tool.
             </p>
             <label class="field">
-              <span class="field__label">CSR file (.pem / .csr) *</span>
+              <span class="field__label">CSR file (.pem) *</span>
               <input
                 class="ti-input"
                 type="file"
-                accept=".pem,.csr,text/plain"
+                accept=".pem"
                 (change)="onCsrFileChange($event)"
               />
               @if (csrFilename()) {
