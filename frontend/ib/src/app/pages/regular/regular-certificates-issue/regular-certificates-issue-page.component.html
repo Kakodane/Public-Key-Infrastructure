@@ -1,0 +1,359 @@
+<div class="page">
+  <div class="page__container">
+
+    <div>
+      <h1 class="page__title">Request a certificate</h1>
+      <p class="page__subtitle">
+        Upload a CSR you generated externally, or let the system autogenerate a key pair for you.
+      </p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="tabs">
+      <button
+        class="tab-btn"
+        [class.tab-btn--active]="activeTab() === 'csr'"
+        type="button"
+        (click)="setTab('csr')"
+      >Upload CSR</button>
+      <button
+        class="tab-btn"
+        [class.tab-btn--active]="activeTab() === 'autogenerate'"
+        type="button"
+        (click)="setTab('autogenerate')"
+      >Autogenerate</button>
+    </div>
+
+    <!-- ===== CSR TAB ===== -->
+    @if (activeTab() === 'csr') {
+      @if (csrResult(); as result) {
+        <!-- CSR success panel -->
+        <section class="ti-card section">
+          <div class="success-header">
+            <div>
+              <h2 class="section__title">Certificate issued</h2>
+              <p class="section__subtitle">Serial: <span class="ti-mono">{{ result.serialNumber }}</span></p>
+            </div>
+            <button class="ti-btn ti-btn-ghost" type="button" (click)="resetCsr()">Issue another</button>
+          </div>
+
+          <div class="details-grid">
+            <div class="details-item">
+              <span class="details-label">Subject CN</span>
+              <span class="details-value">{{ result.subjectCommonName }}</span>
+            </div>
+            <div class="details-item">
+              <span class="details-label">Organization</span>
+              <span class="details-value">{{ result.organizationName }}</span>
+            </div>
+            <div class="details-item">
+              <span class="details-label">Not before</span>
+              <span class="details-value ti-mono">{{ formatDate(result.notBefore) }}</span>
+            </div>
+            <div class="details-item">
+              <span class="details-label">Not after</span>
+              <span class="details-value ti-mono">{{ formatDate(result.notAfter) }}</span>
+            </div>
+          </div>
+
+          <div class="download-group">
+            <select
+              class="ti-input download-format"
+              (change)="csrDownloadFormat.set($any($event.target).value)"
+            >
+              <option value="pem" [selected]="csrDownloadFormat() === 'pem'">PEM</option>
+              <option value="cer" [selected]="csrDownloadFormat() === 'cer'">CER (DER)</option>
+            </select>
+            <button class="ti-btn" type="button" (click)="downloadPublicCert(result.id, csrDownloadFormat())">
+              Download certificate
+            </button>
+          </div>
+        </section>
+
+      } @else {
+        <!-- CSR form -->
+        <form (ngSubmit)="submitCsr()" [formGroup]="csrForm" class="issue-form">
+
+          <section class="ti-card section">
+            <h2 class="section__title">Signing authority (CA)</h2>
+            <label class="field">
+              <span class="field__label">Issuer certificate *</span>
+              <select class="ti-input ti-mono" formControlName="issuerCertificateId">
+                <option [ngValue]="null" disabled>— select CA —</option>
+                @for (c of issuers(); track c.id) {
+                  <option [ngValue]="c.id">
+                    {{ c.subjectCommonName }} ({{ c.type }} · valid until {{ formatDate(c.notAfter) }})
+                  </option>
+                }
+              </select>
+              @if (issuers().length === 0) {
+                <span class="field__hint ti-mono">No CA certificates available in your organization.</span>
+              }
+              @if (csrIssuerError) {
+                <span class="field-error">{{ csrIssuerError }}</span>
+              }
+            </label>
+          </section>
+
+          <section class="ti-card section">
+            <h2 class="section__title">Validity period</h2>
+            <p class="section__subtitle">
+              Dates must fall within the selected CA's validity window.
+            </p>
+            <div class="row">
+              <label class="field">
+                <span class="field__label">Not before *</span>
+                <input
+                  class="ti-input ti-mono"
+                  type="date"
+                  formControlName="notBefore"
+                  [min]="issuerDateMin(csrIssuer())"
+                  [max]="issuerDateMax(csrIssuer())"
+                />
+              </label>
+              <label class="field">
+                <span class="field__label">Not after *</span>
+                <input
+                  class="ti-input ti-mono"
+                  type="date"
+                  formControlName="notAfter"
+                  [min]="issuerDateMin(csrIssuer())"
+                  [max]="issuerDateMax(csrIssuer())"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section class="ti-card section">
+            <h2 class="section__title">CSR file</h2>
+            <p class="section__subtitle">
+              Upload the .pem CSR you generated with openssl or another tool.
+            </p>
+            <label class="field">
+              <span class="field__label">CSR file (.pem / .csr) *</span>
+              <input
+                class="ti-input"
+                type="file"
+                accept=".pem,.csr,text/plain"
+                (change)="onCsrFileChange($event)"
+              />
+              @if (csrFilename()) {
+                <span class="field__hint ti-mono">Selected: {{ csrFilename() }}</span>
+              }
+            </label>
+          </section>
+
+          <section class="ti-card section">
+            @if (csrError()) {
+              <div class="ti-err ti-mono feedback">{{ csrError() }}</div>
+            }
+            <button class="ti-btn" type="submit" [disabled]="csrBusy()">
+              @if (csrBusy()) { Issuing… } @else { Issue certificate }
+            </button>
+          </section>
+
+        </form>
+      }
+    }
+
+    <!-- ===== AUTOGENERATE TAB ===== -->
+    @if (activeTab() === 'autogenerate') {
+      @if (autoResult(); as result) {
+        <!-- Autogenerate success panel -->
+        <section class="ti-card section warning-panel">
+          <h2 class="section__title">Private key — download now</h2>
+          <p class="section__subtitle warning-text">
+            Your private key has been downloaded automatically. This is the only time you can
+            obtain it — it is not stored on the server. After leaving this page you can only
+            download the public certificate.
+          </p>
+          <button class="ti-btn" type="button" (click)="triggerKeystoreDownload(result)">
+            Download keystore again
+          </button>
+        </section>
+
+        <section class="ti-card section">
+          <div class="success-header">
+            <div>
+              <h2 class="section__title">Certificate issued</h2>
+              <p class="section__subtitle">Serial: <span class="ti-mono">{{ result.certificate.serialNumber }}</span></p>
+            </div>
+            <button class="ti-btn ti-btn-ghost" type="button" (click)="resetAuto()">Issue another</button>
+          </div>
+
+          <div class="details-grid">
+            <div class="details-item">
+              <span class="details-label">Subject CN</span>
+              <span class="details-value">{{ result.certificate.subjectCommonName }}</span>
+            </div>
+            <div class="details-item">
+              <span class="details-label">Organization</span>
+              <span class="details-value">{{ result.certificate.organizationName }}</span>
+            </div>
+            <div class="details-item">
+              <span class="details-label">Not before</span>
+              <span class="details-value ti-mono">{{ formatDate(result.certificate.notBefore) }}</span>
+            </div>
+            <div class="details-item">
+              <span class="details-label">Not after</span>
+              <span class="details-value ti-mono">{{ formatDate(result.certificate.notAfter) }}</span>
+            </div>
+          </div>
+
+          <div class="download-group">
+            <select
+              class="ti-input download-format"
+              (change)="autoDownloadFormat.set($any($event.target).value)"
+            >
+              <option value="pem" [selected]="autoDownloadFormat() === 'pem'">PEM</option>
+              <option value="cer" [selected]="autoDownloadFormat() === 'cer'">CER (DER)</option>
+            </select>
+            <button class="ti-btn" type="button" (click)="downloadPublicCert(result.certificate.id, autoDownloadFormat())">
+              Download certificate
+            </button>
+          </div>
+        </section>
+
+      } @else {
+        <!-- Autogenerate form -->
+        <form (ngSubmit)="submitAuto()" [formGroup]="autoForm" class="issue-form">
+
+          <section class="ti-card section">
+            <h2 class="section__title">Signing authority (CA)</h2>
+            <label class="field">
+              <span class="field__label">Issuer certificate *</span>
+              <select class="ti-input ti-mono" formControlName="issuerCertificateId">
+                <option [ngValue]="null" disabled>— select CA —</option>
+                @for (c of issuers(); track c.id) {
+                  <option [ngValue]="c.id">
+                    {{ c.subjectCommonName }} ({{ c.type }} · valid until {{ formatDate(c.notAfter) }})
+                  </option>
+                }
+              </select>
+              @if (issuers().length === 0) {
+                <span class="field__hint ti-mono">No CA certificates available in your organization.</span>
+              }
+              @if (autoIssuerError) {
+                <span class="field-error">{{ autoIssuerError }}</span>
+              }
+            </label>
+          </section>
+
+          <section class="ti-card section">
+            <h2 class="section__title">Validity period</h2>
+            <p class="section__subtitle">
+              Dates must fall within the selected CA's validity window.
+            </p>
+            <div class="row">
+              <label class="field">
+                <span class="field__label">Not before *</span>
+                <input
+                  class="ti-input ti-mono"
+                  type="date"
+                  formControlName="notBefore"
+                  [min]="issuerDateMin(autoIssuer())"
+                  [max]="issuerDateMax(autoIssuer())"
+                />
+              </label>
+              <label class="field">
+                <span class="field__label">Not after *</span>
+                <input
+                  class="ti-input ti-mono"
+                  type="date"
+                  formControlName="notAfter"
+                  [min]="issuerDateMin(autoIssuer())"
+                  [max]="issuerDateMax(autoIssuer())"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section class="ti-card section">
+            <h2 class="section__title">Subject (X.500)</h2>
+
+            <label class="field">
+              <span class="field__label">Common name (CN) *</span>
+              <input class="ti-input" type="text" placeholder="John Doe" formControlName="commonName" />
+              @if (cnError) {
+                <span class="field-error">{{ cnError }}</span>
+              }
+            </label>
+
+            <div class="row">
+              <label class="field">
+                <span class="field__label">Organization (O)</span>
+                <input class="ti-input" type="text" formControlName="organization" />
+              </label>
+              <label class="field">
+                <span class="field__label">Org unit (OU)</span>
+                <input class="ti-input" type="text" formControlName="organizationalUnit" />
+              </label>
+            </div>
+
+            <div class="row">
+              <label class="field">
+                <span class="field__label">Country (C, 2 letters)</span>
+                <input class="ti-input ti-mono" type="text" maxlength="2" placeholder="RS" formControlName="country" />
+                @if (countryError) {
+                  <span class="field-error">{{ countryError }}</span>
+                }
+              </label>
+              <label class="field">
+                <span class="field__label">Email (E)</span>
+                <input class="ti-input ti-mono" type="email" formControlName="emailAddress" />
+              </label>
+            </div>
+          </section>
+
+          <section class="ti-card section">
+            <h2 class="section__title">Key export</h2>
+            <p class="section__subtitle">
+              The private key is generated server-side and returned immediately — it will not be stored.
+              Choose the format and set a password to protect the keystore file.
+            </p>
+
+            <div class="row">
+              <div class="field">
+                <span class="field__label">Keystore format *</span>
+                <div class="radio-group">
+                  <label class="radio">
+                    <input type="radio" formControlName="keystoreFormat" value="pkcs12" />
+                    <span>PKCS12 (.p12)</span>
+                  </label>
+                  <label class="radio">
+                    <input type="radio" formControlName="keystoreFormat" value="jks" />
+                    <span>JKS (.jks)</span>
+                  </label>
+                </div>
+              </div>
+
+              <label class="field">
+                <span class="field__label">Keystore password *</span>
+                <input
+                  class="ti-input"
+                  type="password"
+                  autocomplete="new-password"
+                  formControlName="keystorePassword"
+                />
+                @if (passwordError) {
+                  <span class="field-error">{{ passwordError }}</span>
+                }
+              </label>
+            </div>
+          </section>
+
+          <section class="ti-card section">
+            @if (autoError()) {
+              <div class="ti-err ti-mono feedback">{{ autoError() }}</div>
+            }
+            <button class="ti-btn" type="submit" [disabled]="autoBusy()">
+              @if (autoBusy()) { Generating… } @else { Generate & download key }
+            </button>
+          </section>
+
+        </form>
+      }
+    }
+
+  </div>
+</div>

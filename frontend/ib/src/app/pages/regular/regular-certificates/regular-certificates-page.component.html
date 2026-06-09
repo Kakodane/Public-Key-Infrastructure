@@ -15,9 +15,12 @@
           </p>
         </div>
 
-        <button class="ti-btn ti-btn-ghost" type="button" (click)="loadCertificates()" [disabled]="isLoading()">
-          @if (isLoading()) { Refreshing… } @else { Refresh }
-        </button>
+        <div style="display:flex;gap:8px;">
+          <button class="ti-btn" type="button" (click)="goToIssuePage()">Request certificate</button>
+          <button class="ti-btn ti-btn-ghost" type="button" (click)="loadCertificates()" [disabled]="isLoading()">
+            @if (isLoading()) { Refreshing… } @else { Refresh }
+          </button>
+        </div>
       </div>
 
       <div class="table-wrap">
