@@ -1,11 +1,11 @@
 {
   "/api": {
-    "target": "http://localhost:8080",
+    "target": "https://localhost:8443",
     "secure": false,
     "changeOrigin": true
   },
   "/h2-console": {
-    "target": "http://localhost:8080",
+    "target": "https://localhost:8443",
     "secure": false,
     "changeOrigin": true
   }

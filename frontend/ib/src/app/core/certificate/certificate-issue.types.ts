@@ -37,6 +37,7 @@ export type CertificateExtensionsRequest = {
   pathLenConstraint?: number | null;
   keyUsages?: CertificateKeyUsage[];
   extendedKeyUsages?: CertificateExtendedKeyUsage[];
+  subjectAlternativeNames?: string[];
 };
 
 export type CreateRootCertificateRequest = {

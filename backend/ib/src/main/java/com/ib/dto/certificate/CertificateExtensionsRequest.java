@@ -8,7 +8,8 @@ public record CertificateExtensionsRequest(
 		Boolean isCa,
 		@Min(0) Integer pathLenConstraint,
 		Set<CertificateKeyUsage> keyUsages,
-		Set<CertificateExtendedKeyUsage> extendedKeyUsages
+		Set<CertificateExtendedKeyUsage> extendedKeyUsages,
+        Set<String> subjectAlternativeNames
 ) {
 }
 

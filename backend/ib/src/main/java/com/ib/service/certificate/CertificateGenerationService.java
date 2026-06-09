@@ -38,7 +38,9 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 
 
@@ -224,6 +226,45 @@ public class CertificateGenerationService {
 		if (eku != null) {
 			builder.addExtension(Extension.extendedKeyUsage, false, eku);
 		}
+        GeneralNames san = buildSubjectAlternativeNames(extensions != null ? extensions.subjectAlternativeNames() : null);
+        if (san != null) {
+            builder.addExtension(Extension.subjectAlternativeName, false, san);
+        }
+    }
+
+    private static GeneralNames buildSubjectAlternativeNames(Set<String> requested) {
+        if (requested == null || requested.isEmpty()) {
+            return null;
+        }
+
+        List<GeneralName> names = new ArrayList<>();
+        for (String raw : requested) {
+            if (raw == null || raw.isBlank()) {
+                continue;
+            }
+            String value = raw.trim();
+            int tag = GeneralName.dNSName;
+            int sep = value.indexOf(':');
+            if (sep > 0) {
+                String prefix = value.substring(0, sep).toLowerCase();
+                String rest = value.substring(sep + 1).trim();
+                if (prefix.equals("ip")) {
+                    tag = GeneralName.iPAddress;
+                    value = rest;
+                } else if (prefix.equals("dns")) {
+                    tag = GeneralName.dNSName;
+                    value = rest;
+                }
+            }
+            if (!value.isBlank()) {
+                names.add(new GeneralName(tag, value));
+            }
+        }
+
+        if (names.isEmpty()) {
+            return null;
+        }
+        return new GeneralNames(names.toArray(new GeneralName[0]));
 	}
 
 	private static KeyUsage buildKeyUsage(Set<CertificateKeyUsage> requested, boolean defaultIsCa) {

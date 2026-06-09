@@ -1,0 +1,10 @@
+*.p12
+*.jks
+*.key
+*.crt
+*.pem
+*.pfx
+
+# Generated TLS locations
+backend/ib/src/main/resources/keystore/
+frontend/ib/ssl/

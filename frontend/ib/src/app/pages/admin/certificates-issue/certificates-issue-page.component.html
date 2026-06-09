@@ -168,6 +168,22 @@
             }
           </div>
         </div>
+         <div class="ext-block">
+          <h3 class="ext-block__title">Subject Alternative Names</h3>
+          <label class="field">
+            <span class="field__label">SAN (comma-separated)</span>
+            <input
+              type="text"
+              class="ti-input"
+              formControlName="subjectAlternativeNames"
+              placeholder="dns:localhost, ip:127.0.0.1"
+            />
+            <small class="field__hint ti-mono">
+              Use "dns:" or "ip:" prefixes; a bare value is treated as DNS. Required for TLS
+              server certificates (e.g. dns:localhost).
+            </small>
+          </label>
+        </div>
       </section>
 
       <section class="ti-card section">
